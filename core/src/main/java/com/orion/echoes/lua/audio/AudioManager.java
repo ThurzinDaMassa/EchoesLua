@@ -3,6 +3,7 @@ package com.orion.echoes.lua.audio;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.audio.Sound;
+import com.badlogic.gdx.math.MathUtils;
 
 import com.orion.echoes.lua.enums.ItemType;
 
@@ -76,6 +77,12 @@ public class AudioManager {
 
     private boolean muted;
 
+    private float ambientMix;
+
+    private float portalMix;
+
+    private float portalPan;
+
     // =========================================================
     // CONSTRUTOR
     // =========================================================
@@ -99,6 +106,12 @@ public class AudioManager {
         portalLoopActive = false;
 
         muted = false;
+
+        ambientMix = 1f;
+
+        portalMix = 0f;
+
+        portalPan = 0f;
     }
 
     // =========================================================
@@ -215,7 +228,7 @@ public class AudioManager {
         );
 
         portalLoopMusic.setVolume(
-            getPortalVolume()
+            0f
         );
     }
 
@@ -228,7 +241,9 @@ public class AudioManager {
         boolean playerMoving,
         boolean insideBase,
         boolean oxygenCritical,
-        boolean portalActive
+        boolean portalActive,
+        float portalProximity,
+        float portalPan
     ) {
 
         updateTimers(
@@ -247,8 +262,12 @@ public class AudioManager {
             oxygenCritical
         );
 
-        updatePortalLoop(
-            portalActive
+        updateMusicMix(
+            delta,
+            oxygenCritical,
+            portalActive,
+            portalProximity,
+            portalPan
         );
     }
 
@@ -289,13 +308,10 @@ public class AudioManager {
             return;
         }
 
-        play(
-            footstepSound,
-            0.26f
-        );
+        playVaried(footstepSound, 0.24f, 0.91f, 1.08f);
 
         footstepTimer =
-            0.32f;
+            0.30f;
     }
 
     // =========================================================
@@ -314,13 +330,10 @@ public class AudioManager {
             return;
         }
 
-        play(
-            baseRechargeSound,
-            0.20f
-        );
+        playVaried(baseRechargeSound, 0.22f, 0.96f, 1.04f);
 
         rechargeTimer =
-            1.35f;
+            1.80f;
     }
 
     // =========================================================
@@ -341,28 +354,47 @@ public class AudioManager {
 
         play(
             oxygenWarningSound,
-            0.48f
+            0.38f
         );
 
         oxygenWarningTimer =
-            2.1f;
+            2.65f;
     }
 
     // =========================================================
     // PORTAL LOOP
     // =========================================================
 
-    private void updatePortalLoop(
-        boolean active
+    private void updateMusicMix(
+        float delta,
+        boolean oxygenCritical,
+        boolean portalActive,
+        float portalProximity,
+        float requestedPortalPan
     ) {
+        if (portalActive && !portalLoopActive) {
+            portalLoopActive = true;
+            portalMix = 0f;
+            portalLoopMusic.setVolume(0f);
+            portalLoopMusic.play();
+        }
 
-        if (active) {
+        float proximity = MathUtils.clamp(portalProximity, 0f, 1f);
+        float ambientTarget = portalActive
+            ? MathUtils.lerp(0.82f, 0.52f, proximity)
+            : oxygenCritical ? 0.76f : 1f;
+        float portalTarget = portalActive ? MathUtils.lerp(0.18f, 1f, proximity) : 0f;
+        float fade = MathUtils.clamp(delta * 1.8f, 0f, 1f);
+        ambientMix = MathUtils.lerp(ambientMix, ambientTarget, fade);
+        portalMix = MathUtils.lerp(portalMix, portalTarget, fade);
+        portalPan = MathUtils.lerp(portalPan,
+            MathUtils.clamp(requestedPortalPan, -0.72f, 0.72f), fade);
+        updateMusicVolumes();
 
-            startPortalLoop();
-
-        } else {
-
-            stopPortalLoop();
+        if (!portalActive && portalLoopActive && portalMix < 0.015f) {
+            portalLoopActive = false;
+            portalMix = 0f;
+            portalLoopMusic.stop();
         }
     }
 
@@ -374,8 +406,10 @@ public class AudioManager {
 
         portalLoopActive = true;
 
+        portalMix = 0f;
+
         portalLoopMusic.setVolume(
-            getPortalVolume()
+            0f
         );
 
         portalLoopMusic.play();
@@ -388,6 +422,8 @@ public class AudioManager {
         }
 
         portalLoopActive = false;
+
+        portalMix = 0f;
 
         portalLoopMusic.stop();
     }
@@ -405,8 +441,10 @@ public class AudioManager {
             return;
         }
 
+        ambientMix = 1f;
+
         ambientMusic.setVolume(
-            getMusicVolume()
+            getMusicVolume() * ambientMix
         );
 
         ambientMusic.play();
@@ -454,28 +492,19 @@ public class AudioManager {
 
             case OXYGEN:
 
-                play(
-                    pickupOxygenSound,
-                    0.85f
-                );
+                playVaried(pickupOxygenSound, 0.78f, 0.97f, 1.05f);
 
                 break;
 
             case FOOD:
 
-                play(
-                    pickupFoodSound,
-                    0.80f
-                );
+                playVaried(pickupFoodSound, 0.74f, 0.94f, 1.04f);
 
                 break;
 
             case ICE_ROCK:
 
-                play(
-                    pickupIceSound,
-                    0.90f
-                );
+                playVaried(pickupIceSound, 0.82f, 0.90f, 1.02f);
 
                 break;
         }
@@ -487,10 +516,7 @@ public class AudioManager {
 
     public void playIceProcessing() {
 
-        play(
-            processIceSound,
-            0.85f
-        );
+        playVaried(processIceSound, 0.78f, 0.97f, 1.03f);
     }
 
     // =========================================================
@@ -518,13 +544,10 @@ public class AudioManager {
             return;
         }
 
-        play(
-            rockImpactSound,
-            0.45f
-        );
+        playVaried(rockImpactSound, 0.28f, 0.82f, 1.02f);
 
         rockImpactTimer =
-            0.18f;
+            0.32f;
     }
 
     // =========================================================
@@ -547,6 +570,8 @@ public class AudioManager {
 
         stopPortalLoop();
 
+        stopAmbientMusic();
+
         play(
             defeatSound,
             0.90f
@@ -567,10 +592,7 @@ public class AudioManager {
 
     public void playMenuHover() {
 
-        play(
-            menuHoverSound,
-            0.32f
-        );
+        playVaried(menuHoverSound, 0.24f, 0.99f, 1.04f);
     }
 
     // =========================================================
@@ -597,6 +619,23 @@ public class AudioManager {
                 soundVolume
                 *
                 masterVolume
+        );
+    }
+
+    private void playVaried(
+        Sound sound,
+        float volume,
+        float minimumPitch,
+        float maximumPitch
+    ) {
+        if (muted || sound == null) {
+            return;
+        }
+
+        sound.play(
+            volume * soundVolume * masterVolume,
+            MathUtils.random(minimumPitch, maximumPitch),
+            MathUtils.random(-0.06f, 0.06f)
         );
     }
 
@@ -663,15 +702,12 @@ public class AudioManager {
         if (ambientMusic != null) {
 
             ambientMusic.setVolume(
-                getMusicVolume()
+                getMusicVolume() * ambientMix
             );
         }
 
         if (portalLoopMusic != null) {
-
-            portalLoopMusic.setVolume(
-                getPortalVolume()
-            );
+            portalLoopMusic.setPan(portalPan, getPortalVolume() * portalMix);
         }
     }
 
@@ -697,6 +733,11 @@ public class AudioManager {
         muted =
             !muted;
 
+        updateMusicVolumes();
+    }
+
+    public void setMuted(boolean muted) {
+        this.muted = muted;
         updateMusicVolumes();
     }
 

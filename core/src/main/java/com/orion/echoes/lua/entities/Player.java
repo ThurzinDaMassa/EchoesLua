@@ -9,6 +9,7 @@ import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 
 import com.orion.echoes.lua.assets.GameAssets;
+import com.orion.echoes.lua.systems.PlayerStatus;
 import com.orion.echoes.lua.utils.GameConstants;
 
 public class Player {
@@ -42,6 +43,12 @@ public class Player {
     private boolean moving;
 
     private boolean facingLeft;
+
+    private boolean sprinting;
+
+    private boolean wantsToSprint;
+
+    private float movementTime;
 
     // =========================================================
     // CONSTRUTOR
@@ -90,7 +97,12 @@ public class Player {
 
         moving = false;
 
-        facingLeft = false;
+        // A arte original do astronauta aponta para a esquerda.
+        facingLeft = true;
+
+        sprinting = false;
+
+        movementTime = 0f;
 
         updateBounds();
     }
@@ -100,7 +112,8 @@ public class Player {
     // =========================================================
 
     public void update(
-        float delta
+        float delta,
+        PlayerStatus status
     ) {
 
         /*
@@ -116,7 +129,8 @@ public class Player {
         readInput();
 
         updateMovement(
-            delta
+            delta,
+            status
         );
 
         limitToWorld();
@@ -170,6 +184,10 @@ public class Player {
                     Input.Keys.DOWN
                 );
 
+        wantsToSprint =
+            Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)
+                || Gdx.input.isKeyPressed(Input.Keys.SHIFT_RIGHT);
+
         if (moveLeft) {
             direction.x -= 1f;
         }
@@ -192,13 +210,19 @@ public class Player {
     // =========================================================
 
     private void updateMovement(
-        float delta
+        float delta,
+        PlayerStatus status
     ) {
 
         moving =
             !direction.isZero();
 
+        sprinting = moving
+            && wantsToSprint
+            && status.getEnergy() > 0f;
+
         if (!moving) {
+            status.addEnergy(GameConstants.ENERGY_RECOVERY_RATE * delta);
             return;
         }
 
@@ -210,10 +234,19 @@ public class Player {
 
         updateFacingDirection();
 
+        float speed = GameConstants.PLAYER_SPEED;
+        if (sprinting) {
+            speed *= GameConstants.PLAYER_SPRINT_MULTIPLIER;
+            status.removeEnergy(GameConstants.SPRINT_ENERGY_COST * delta);
+        } else {
+            status.addEnergy(GameConstants.ENERGY_RECOVERY_RATE * 0.55f * delta);
+        }
+
+        movementTime += delta * (sprinting ? 13f : 8f);
+
         position.mulAdd(
             direction,
-            GameConstants.PLAYER_SPEED
-                * delta
+            speed * delta
         );
     }
 
@@ -264,16 +297,22 @@ public class Player {
 
     private void updateSprite() {
 
+        float bob = moving
+            ? MathUtils.sin(movementTime) * (sprinting ? 3f : 1.7f)
+            : 0f;
+
         sprite.setPosition(
             position.x,
-            position.y
+            position.y + bob
         );
+
+        sprite.setRotation(moving ? -direction.x * bob * 0.8f : 0f);
 
         /*
          * O flip e feito apenas no eixo X.
          */
         sprite.setFlip(
-            facingLeft,
+            !facingLeft,
             false
         );
     }
@@ -475,6 +514,10 @@ public class Player {
 
     public boolean isFacingLeft() {
         return facingLeft;
+    }
+
+    public boolean isSprinting() {
+        return sprinting;
     }
 
     // =========================================================

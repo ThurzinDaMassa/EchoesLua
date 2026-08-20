@@ -14,28 +14,34 @@ public class ObstacleSystem {
         AudioManager audio
     ) {
 
-        for (
-            Obstacle obstacle : obstacles
-        ) {
+        if (!collides(player, obstacles)) {
+            return false;
+        }
 
-            if (
-                player
-                    .getBounds()
-                    .overlaps(
-                        obstacle
-                            .getBounds()
-                    )
-            ) {
+        float currentX = player.getX();
+        float currentY = player.getY();
+        float previousX = player.getPreviousPosition().x;
+        float previousY = player.getPreviousPosition().y;
 
-                player
-                    .restorePreviousPosition();
-
-                audio.playRockImpact();
-
-                return true;
+        // Tenta preservar um eixo para o jogador deslizar ao longo da rocha.
+        player.setPosition(previousX, currentY);
+        if (collides(player, obstacles)) {
+            player.setPosition(currentX, previousY);
+            if (collides(player, obstacles)) {
+                player.setPosition(previousX, previousY);
             }
         }
 
+        audio.playRockImpact();
+        return true;
+    }
+
+    private boolean collides(Player player, Array<Obstacle> obstacles) {
+        for (Obstacle obstacle : obstacles) {
+            if (player.getBounds().overlaps(obstacle.getBounds())) {
+                return true;
+            }
+        }
         return false;
     }
 }

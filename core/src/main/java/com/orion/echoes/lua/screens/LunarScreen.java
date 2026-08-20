@@ -9,6 +9,7 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
@@ -29,6 +30,7 @@ import com.orion.echoes.lua.systems.ObstacleSystem;
 import com.orion.echoes.lua.systems.PlayerStatus;
 import com.orion.echoes.lua.systems.SurvivalSystem;
 import com.orion.echoes.lua.ui.ModernHud;
+import com.orion.echoes.lua.progress.MissionScore;
 import com.orion.echoes.lua.utils.GameConstants;
 import com.orion.echoes.lua.utils.MoonSurfaceTextureFactory;
 
@@ -283,8 +285,8 @@ public class LunarScreen extends ScreenAdapter {
             new Array<>();
 
         addObstacle(
-            810f,
-            690f,
+            930f,
+            820f,
             145f,
             115f
         );
@@ -401,7 +403,7 @@ public class LunarScreen extends ScreenAdapter {
             new IceProcessor();
 
         survivalSystem =
-            new SurvivalSystem();
+            new SurvivalSystem(game.getSettings().getDifficulty());
 
         particleManager =
             new ParticleManager();
@@ -410,7 +412,7 @@ public class LunarScreen extends ScreenAdapter {
             new ObstacleSystem();
 
         missionSystem =
-            new MissionSystem();
+            new MissionSystem(game.getSettings().getDifficulty());
     }
 
     private void createHud() {
@@ -535,6 +537,13 @@ public class LunarScreen extends ScreenAdapter {
 
             paused =
                 !paused;
+
+            if (paused) {
+                audio.pauseAmbientMusic();
+                audio.stopPortalLoop();
+            } else {
+                audio.resumeAmbientMusic();
+            }
         }
 
         if (
@@ -555,6 +564,7 @@ public class LunarScreen extends ScreenAdapter {
         ) {
 
             audio.toggleMute();
+            game.getSettings().setMuted(audio.isMuted());
         }
     }
 
@@ -565,7 +575,8 @@ public class LunarScreen extends ScreenAdapter {
         missionTime += delta;
 
         player.update(
-            delta
+            delta,
+            playerStatus
         );
 
         obstacleSystem
@@ -645,7 +656,7 @@ public class LunarScreen extends ScreenAdapter {
             player,
             insideBase,
             playerStatus.getOxygen()
-                < 30f,
+                < GameConstants.CRITICAL_OXYGEN_THRESHOLD,
             portal
         );
 
@@ -654,8 +665,10 @@ public class LunarScreen extends ScreenAdapter {
             player.isMoving(),
             insideBase,
             playerStatus.getOxygen()
-                < 30f,
-            portal.isActive()
+                < GameConstants.CRITICAL_OXYGEN_THRESHOLD,
+            portal.isActive(),
+            getPortalProximity(),
+            getPortalPan()
         );
 
         updateCamera(
@@ -671,6 +684,24 @@ public class LunarScreen extends ScreenAdapter {
         }
     }
 
+    private float getPortalProximity() {
+        float distance = Vector2.dst(
+            player.getCenterX(),
+            player.getCenterY(),
+            portal.getCenterX(),
+            portal.getCenterY()
+        );
+        return 1f - MathUtils.clamp(distance / 1100f, 0f, 1f);
+    }
+
+    private float getPortalPan() {
+        return MathUtils.clamp(
+            (portal.getCenterX() - player.getCenterX()) / 700f,
+            -1f,
+            1f
+        );
+    }
+
     private void goToVictoryScreen() {
 
         if (changingScreen) {
@@ -684,14 +715,27 @@ public class LunarScreen extends ScreenAdapter {
         int collectedItems =
             countCollectedItems();
 
-        game.setScreen(
+        int score = MissionScore.calculate(
+            missionTime,
+            collectedItems,
+            playerStatus.getOxygen(),
+            game.getSettings().getDifficulty()
+        );
+
+        boolean newRecord = game.getProgress().recordVictory(score, missionTime);
+        int bestScore = game.getProgress().getBestScore();
+
+        game.changeScreen(
             new VictoryScreen(
                 game,
                 missionTime,
                 playerStatus.getWater(),
                 playerStatus.getFuel(),
                 collectedItems,
-                playerStatus.getOxygen()
+                playerStatus.getOxygen(),
+                score,
+                bestScore,
+                newRecord
             )
         );
     }
@@ -725,7 +769,7 @@ public class LunarScreen extends ScreenAdapter {
 
         audio.stopGameplayAudio();
 
-        game.setScreen(
+        game.changeScreen(
             new MenuScreen(
                 game
             )
@@ -878,7 +922,7 @@ public class LunarScreen extends ScreenAdapter {
         batch.begin();
 
         final int tileSize =
-            256;
+            MoonSurfaceTextureFactory.TEXTURE_SIZE;
 
         float left =
             camera.position.x
@@ -958,12 +1002,20 @@ public class LunarScreen extends ScreenAdapter {
                 y += tileSize
             ) {
 
+                int tileX = x / tileSize;
+                int tileY = y / tileSize;
                 batch.draw(
                     moonSurfaceTexture,
                     x,
                     y,
                     tileSize,
-                    tileSize
+                    tileSize,
+                    0,
+                    0,
+                    MoonSurfaceTextureFactory.TEXTURE_SIZE,
+                    MoonSurfaceTextureFactory.TEXTURE_SIZE,
+                    (tileX & 1) == 1,
+                    (tileY & 1) == 1
                 );
             }
         }
@@ -1100,6 +1152,16 @@ public class LunarScreen extends ScreenAdapter {
                 width,
                 height
             );
+        }
+    }
+
+    @Override
+    public void pause() {
+        if (!changingScreen && survivalSystem != null
+            && !survivalSystem.isMissionFailed()) {
+            paused = true;
+            audio.pauseAmbientMusic();
+            audio.stopPortalLoop();
         }
     }
 

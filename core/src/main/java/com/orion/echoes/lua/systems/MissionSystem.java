@@ -4,14 +4,13 @@ import com.orion.echoes.lua.audio.AudioManager;
 import com.orion.echoes.lua.effects.ParticleManager;
 import com.orion.echoes.lua.entities.Player;
 import com.orion.echoes.lua.entities.Portal;
+import com.orion.echoes.lua.config.Difficulty;
 
 public class MissionSystem {
 
-    private static final int REQUIRED_WATER =
-        2;
+    private final int requiredWater;
 
-    private static final int REQUIRED_FUEL =
-        2;
+    private final int requiredFuel;
 
     private boolean objectivesComplete;
 
@@ -21,11 +20,20 @@ public class MissionSystem {
 
     public MissionSystem() {
 
+        this(Difficulty.STANDARD);
+    }
+
+    public MissionSystem(Difficulty difficulty) {
+
         objectivesComplete = false;
 
         missionComplete = false;
 
         activationEffectPlayed = false;
+
+        requiredWater = difficulty.getRequiredWater();
+
+        requiredFuel = difficulty.getRequiredFuel();
     }
 
     public void update(
@@ -49,11 +57,11 @@ public class MissionSystem {
 
             boolean waterComplete =
                 status.getWater()
-                    >= REQUIRED_WATER;
+                    >= requiredWater;
 
             boolean fuelComplete =
                 status.getFuel()
-                    >= REQUIRED_FUEL;
+                    >= requiredFuel;
 
             if (
                 waterComplete
@@ -95,11 +103,11 @@ public class MissionSystem {
     }
 
     public int getRequiredWater() {
-        return REQUIRED_WATER;
+        return requiredWater;
     }
 
     public int getRequiredFuel() {
-        return REQUIRED_FUEL;
+        return requiredFuel;
     }
 
     public boolean areObjectivesComplete() {

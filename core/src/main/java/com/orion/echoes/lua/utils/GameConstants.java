@@ -28,6 +28,10 @@ public final class GameConstants {
 
     public static final float PLAYER_SPEED = 320f;
 
+    public static final float PLAYER_SPRINT_MULTIPLIER = 1.55f;
+    public static final float SPRINT_ENERGY_COST = 28f;
+    public static final float ENERGY_RECOVERY_RATE = 18f;
+
     public static final float PLAYER_START_X =
         WORLD_WIDTH / 2f;
 
@@ -68,6 +72,8 @@ public final class GameConstants {
      */
     public static final float OXYGEN_CONSUMPTION_RATE =
         2f;
+
+    public static final float CRITICAL_OXYGEN_THRESHOLD = 25f;
 
     // =========================================================
     // ENERGIA

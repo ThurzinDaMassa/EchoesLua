@@ -4,10 +4,10 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
-import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
@@ -18,54 +18,26 @@ import com.orion.echoes.lua.entities.Portal;
 import com.orion.echoes.lua.systems.IceProcessor;
 import com.orion.echoes.lua.systems.MissionSystem;
 import com.orion.echoes.lua.systems.PlayerStatus;
+import com.orion.echoes.lua.utils.GameConstants;
 
 public class ModernHud {
-
     private static final float WIDTH = 1280f;
     private static final float HEIGHT = 720f;
 
     private final OrthographicCamera camera;
-
     private final Viewport viewport;
-
     private final ShapeRenderer shapes;
-
-    private final BitmapFont font;
+    private final UiFonts fonts;
 
     private float animationTime;
 
     public ModernHud() {
-
-        camera =
-            new OrthographicCamera();
-
-        viewport =
-            new FitViewport(
-                WIDTH,
-                HEIGHT,
-                camera
-            );
-
-        camera.position.set(
-            WIDTH / 2f,
-            HEIGHT / 2f,
-            0f
-        );
-
+        camera = new OrthographicCamera();
+        viewport = new FitViewport(WIDTH, HEIGHT, camera);
+        camera.position.set(WIDTH / 2f, HEIGHT / 2f, 0f);
         camera.update();
-
-        shapes =
-            new ShapeRenderer();
-
-        font =
-            new BitmapFont();
-
-        font.getRegion()
-            .getTexture()
-            .setFilter(
-                Texture.TextureFilter.Linear,
-                Texture.TextureFilter.Linear
-            );
+        shapes = new ShapeRenderer();
+        fonts = new UiFonts();
     }
 
     public void render(
@@ -80,1165 +52,243 @@ public class ModernHud {
         boolean paused,
         boolean missionFailed
     ) {
-
-        animationTime +=
-            Gdx.graphics.getDeltaTime();
+        animationTime += Gdx.graphics.getDeltaTime();
+        boolean insideBase = base.isPlayerInside(player);
 
         enableBlend();
-
-        renderStatusPanel(
-            status,
-            base.isPlayerInside(player)
-        );
-
-        renderResourceStrip(
-            status
-        );
-
-        renderMissionPanel(
-            status,
-            mission,
-            portal,
-            missionTime
-        );
-
-        renderInteractionPrompt(
-            player,
-            base,
-            status,
-            processor
-        );
-
-        renderControls();
-
-        if (
-            status.getOxygen() < 30f
-                &&
-                !missionFailed
-        ) {
-
-            renderCriticalOxygen();
-        }
-
-        if (paused) {
-
-            renderPauseOverlay(
-                batch
-            );
-        }
-
-        if (missionFailed) {
-
-            renderGameOverOverlay(
-                batch
-            );
-        }
-
-        renderTexts(
-            batch,
-            status,
-            player,
-            base,
-            processor,
-            mission,
-            portal,
-            missionTime,
-            paused,
-            missionFailed
-        );
-
+        drawInterfaceShapes(status, insideBase, processor, mission, portal, paused, missionFailed);
+        drawInterfaceText(batch, status, player, insideBase, processor, mission, portal, missionTime);
         disableBlend();
     }
 
-    private void renderStatusPanel(
+    private void drawInterfaceShapes(
         PlayerStatus status,
-        boolean insideBase
+        boolean insideBase,
+        IceProcessor processor,
+        MissionSystem mission,
+        Portal portal,
+        boolean paused,
+        boolean missionFailed
     ) {
+        shapes.setProjectionMatrix(camera.combined);
+        shapes.begin(ShapeRenderer.ShapeType.Filled);
 
-        shapes.setProjectionMatrix(
-            camera.combined
-        );
+        UiTheme.panel(shapes, 24f, 576f, 342f, 120f,
+            insideBase ? UiTheme.GREEN : UiTheme.CYAN);
+        UiTheme.panel(shapes, 390f, 625f, 500f, 71f, UiTheme.CYAN);
+        UiTheme.panel(shapes, 914f, 576f, 342f, 120f,
+            portal.isActive() ? UiTheme.PURPLE : UiTheme.CYAN_SOFT);
 
-        shapes.begin(
-            ShapeRenderer.ShapeType.Filled
-        );
+        UiTheme.bar(shapes, 112f, 638f, 220f, 9f,
+            status.getOxygen() / GameConstants.MAX_OXYGEN,
+            oxygenColor(status.getOxygen()));
+        UiTheme.bar(shapes, 112f, 606f, 220f, 7f,
+            status.getEnergy() / GameConstants.MAX_ENERGY,
+            UiTheme.GREEN);
 
-        drawPanel(
-            22f,
-            594f,
-            350f,
-            104f
-        );
+        drawResourceDivider(556f);
+        drawResourceDivider(722f);
 
-        drawBar(
-            112f,
-            648f,
-            230f,
-            12f,
-            status.getOxygen() / 100f,
-            getOxygenColor(
-                status.getOxygen()
-            )
-        );
+        float waterProgress = (float) status.getWater() / mission.getRequiredWater();
+        float fuelProgress = (float) status.getFuel() / mission.getRequiredFuel();
+        float missionProgress = (MathUtils.clamp(waterProgress, 0f, 1f)
+            + MathUtils.clamp(fuelProgress, 0f, 1f)) * 0.5f;
+        UiTheme.bar(shapes, 940f, 597f, 290f, 6f, missionProgress,
+            portal.isActive() ? UiTheme.PURPLE : UiTheme.CYAN);
 
-        drawBar(
-            112f,
-            617f,
-            230f,
-            12f,
-            status.getEnergy() / 100f,
-            new Color(
-                0.22f,
-                0.90f,
-                0.55f,
-                1f
-            )
-        );
+        shapes.setColor(0.004f, 0.012f, 0.018f, 0.82f);
+        shapes.rect(24f, 20f, 360f, 31f);
+        shapes.setColor(UiTheme.CYAN_SOFT);
+        shapes.rect(24f, 50f, 360f, 1f);
 
-        shapes.setColor(
-            insideBase
-                ? new Color(
-                0.20f,
-                0.95f,
-                0.60f,
-                1f
-            )
-                : new Color(
-                0.12f,
-                0.68f,
-                0.85f,
-                1f
-            )
-        );
+        if (insideBase) {
+            UiTheme.panel(shapes, 404f, 22f, 472f, 62f, UiTheme.GREEN);
+            shapes.setColor(UiTheme.GREEN);
+            shapes.rect(422f, 38f, 32f, 32f);
+        } else if (processor.getLastMessage() != null) {
+            shapes.setColor(0.004f, 0.014f, 0.022f, 0.94f);
+            shapes.rect(390f, 20f, 500f, 44f);
+            shapes.setColor(UiTheme.CYAN_SOFT);
+            shapes.rect(390f, 20f, 3f, 44f);
+            shapes.setColor(UiTheme.BORDER);
+            shapes.rect(390f, 63f, 500f, 1f);
+        }
 
-        shapes.rect(
-            22f,
-            594f,
-            4f,
-            104f
-        );
+        if (status.getOxygen() < GameConstants.CRITICAL_OXYGEN_THRESHOLD && !missionFailed) {
+            float pulse = 0.08f + MathUtils.sin(animationTime * 6f) * 0.035f;
+            shapes.setColor(0.9f, 0.02f, 0.04f, pulse);
+            shapes.rect(0f, 0f, WIDTH, HEIGHT);
+            shapes.setColor(UiTheme.DANGER);
+            shapes.rect(0f, HEIGHT - 4f, WIDTH, 4f);
+        }
+
+        if (paused || missionFailed) {
+            shapes.setColor(0.002f, 0.006f, 0.010f, 0.82f);
+            shapes.rect(0f, 0f, WIDTH, HEIGHT);
+            UiTheme.panel(shapes, 385f, 220f, 510f, 280f,
+                missionFailed ? UiTheme.DANGER : UiTheme.CYAN);
+        }
 
         shapes.end();
     }
 
-    private void renderResourceStrip(
-        PlayerStatus status
-    ) {
-
-        shapes.begin(
-            ShapeRenderer.ShapeType.Filled
-        );
-
-        drawPanel(
-            420f,
-            648f,
-            440f,
-            50f
-        );
-
-        drawResourceCard(
-            432f,
-            657f,
-            126f,
-            32f
-        );
-
-        drawResourceCard(
-            570f,
-            657f,
-            126f,
-            32f
-        );
-
-        drawResourceCard(
-            708f,
-            657f,
-            140f,
-            32f
-        );
-
-        shapes.end();
+    private void drawResourceDivider(float x) {
+        shapes.setColor(UiTheme.BORDER);
+        shapes.rect(x, 641f, 1f, 38f);
     }
 
-    private void renderMissionPanel(
+    private Color oxygenColor(float oxygen) {
+        if (oxygen < GameConstants.CRITICAL_OXYGEN_THRESHOLD) return UiTheme.DANGER;
+        if (oxygen < 50f) return UiTheme.WARNING;
+        return UiTheme.CYAN;
+    }
+
+    private void drawInterfaceText(
+        SpriteBatch batch,
         PlayerStatus status,
+        Player player,
+        boolean insideBase,
+        IceProcessor processor,
         MissionSystem mission,
         Portal portal,
         float missionTime
     ) {
-
-        shapes.begin(
-            ShapeRenderer.ShapeType.Filled
-        );
-
-        drawPanel(
-            900f,
-            594f,
-            358f,
-            104f
-        );
-
-        float waterProgress =
-            Math.min(
-                1f,
-                status.getWater()
-                    /
-                    (float)
-                        mission.getRequiredWater()
-            );
-
-        float fuelProgress =
-            Math.min(
-                1f,
-                status.getFuel()
-                    /
-                    (float)
-                        mission.getRequiredFuel()
-            );
-
-        float progress =
-            Math.min(
-                waterProgress,
-                fuelProgress
-            );
-
-        drawBar(
-            922f,
-            611f,
-            314f,
-            8f,
-            progress,
-            portal.isActive()
-                ? new Color(
-                0.48f,
-                0.34f,
-                1f,
-                1f
-            )
-                : new Color(
-                0.05f,
-                0.82f,
-                1f,
-                1f
-            )
-        );
-
-        shapes.setColor(
-            portal.isActive()
-                ? new Color(
-                0.50f,
-                0.34f,
-                1f,
-                1f
-            )
-                : new Color(
-                0.04f,
-                0.32f,
-                0.44f,
-                1f
-            )
-        );
-
-        shapes.rect(
-            900f,
-            594f,
-            4f,
-            104f
-        );
-
-        shapes.end();
-    }
-
-    private void renderInteractionPrompt(
-        Player player,
-        LunarBase base,
-        PlayerStatus status,
-        IceProcessor processor
-    ) {
-
-        if (
-            !base.isPlayerInside(player)
-        ) {
-
-            return;
-        }
-
-        shapes.begin(
-            ShapeRenderer.ShapeType.Filled
-        );
-
-        drawPanel(
-            430f,
-            22f,
-            420f,
-            52f
-        );
-
-        shapes.setColor(
-            0.05f,
-            0.86f,
-            1f,
-            1f
-        );
-
-        shapes.rect(
-            444f,
-            32f,
-            34f,
-            32f
-        );
-
-        shapes.end();
-    }
-
-    private void renderControls() {
-
-        shapes.begin(
-            ShapeRenderer.ShapeType.Filled
-        );
-
-        shapes.setColor(
-            0f,
-            0f,
-            0f,
-            0.28f
-        );
-
-        shapes.rect(
-            20f,
-            18f,
-            275f,
-            28f
-        );
-
-        shapes.end();
-    }
-
-    private void renderCriticalOxygen() {
-
-        float pulse =
-            0.25f
-                +
-                (float) Math.sin(
-                    animationTime * 6f
-                )
-                    * 0.10f;
-
-        shapes.begin(
-            ShapeRenderer.ShapeType.Line
-        );
-
-        shapes.setColor(
-            1f,
-            0.12f,
-            0.12f,
-            pulse + 0.35f
-        );
-
-        shapes.rect(
-            5f,
-            5f,
-            WIDTH - 10f,
-            HEIGHT - 10f
-        );
-
-        shapes.end();
-    }
-
-    private void drawPanel(
-        float x,
-        float y,
-        float width,
-        float height
-    ) {
-
-        shapes.setColor(
-            0.012f,
-            0.028f,
-            0.044f,
-            0.91f
-        );
-
-        shapes.rect(
-            x,
-            y,
-            width,
-            height
-        );
-
-        shapes.setColor(
-            0.05f,
-            0.58f,
-            0.72f,
-            1f
-        );
-
-        shapes.rect(
-            x,
-            y + height - 2f,
-            width,
-            2f
-        );
-    }
-
-    private void drawResourceCard(
-        float x,
-        float y,
-        float width,
-        float height
-    ) {
-
-        shapes.setColor(
-            0.025f,
-            0.065f,
-            0.09f,
-            0.92f
-        );
-
-        shapes.rect(
-            x,
-            y,
-            width,
-            height
-        );
-
-        shapes.setColor(
-            0.04f,
-            0.45f,
-            0.58f,
-            1f
-        );
-
-        shapes.rect(
-            x,
-            y,
-            3f,
-            height
-        );
-    }
-
-    private void drawBar(
-        float x,
-        float y,
-        float width,
-        float height,
-        float progress,
-        Color color
-    ) {
-
-        progress =
-            Math.max(
-                0f,
-                Math.min(
-                    1f,
-                    progress
-                )
-            );
-
-        shapes.setColor(
-            0.025f,
-            0.045f,
-            0.06f,
-            1f
-        );
-
-        shapes.rect(
-            x,
-            y,
-            width,
-            height
-        );
-
-        shapes.setColor(
-            color
-        );
-
-        shapes.rect(
-            x + 1f,
-            y + 1f,
-            (width - 2f)
-                * progress,
-            height - 2f
-        );
-    }
-
-    private Color getOxygenColor(
-        float oxygen
-    ) {
-
-        if (oxygen <= 25f) {
-
-            return new Color(
-                1f,
-                0.18f,
-                0.18f,
-                1f
-            );
-        }
-
-        if (oxygen <= 50f) {
-
-            return new Color(
-                1f,
-                0.62f,
-                0.14f,
-                1f
-            );
-        }
-
-        return new Color(
-            0.05f,
-            0.84f,
-            1f,
-            1f
-        );
-    }
-
-    private void renderTexts(
-        SpriteBatch batch,
-        PlayerStatus status,
-        Player player,
-        LunarBase base,
-        IceProcessor processor,
-        MissionSystem mission,
-        Portal portal,
-        float missionTime,
-        boolean paused,
-        boolean missionFailed
-    ) {
-
-        batch.setProjectionMatrix(
-            camera.combined
-        );
-
+        batch.setProjectionMatrix(camera.combined);
         batch.begin();
 
-        font.getData()
-            .setScale(
-                0.82f
-            );
+        label(fonts.label, UiTheme.CYAN_SOFT);
+        fonts.label.draw(batch, "EVA // 01", 44f, 678f);
 
-        font.setColor(
-            new Color(
-                0.42f,
-                0.72f,
-                0.80f,
-                1f
-            )
-        );
+        label(fonts.micro, UiTheme.MUTED);
+        fonts.micro.draw(batch, "OXIGENIO", 44f, 649f);
+        fonts.micro.draw(batch, "ENERGIA", 44f, 617f);
 
-        font.draw(
-            batch,
-            "EVA-01",
-            42f,
-            680f
-        );
+        label(fonts.label, UiTheme.TEXT);
+        fonts.label.draw(batch, Math.round(status.getOxygen()) + "%", 290f, 651f,
+            44f, Align.right, false);
+        fonts.label.draw(batch, Math.round(status.getEnergy()) + "%", 290f, 619f,
+            44f, Align.right, false);
 
-        font.setColor(
-            Color.WHITE
-        );
+        label(fonts.micro, insideBase ? UiTheme.GREEN : UiTheme.MUTED);
+        String state = insideBase ? "AMBIENTE PRESSURIZADO"
+            : player.isSprinting() ? "PROPULSAO EVA ATIVA" : "SUPERFICIE LUNAR";
+        fonts.micro.draw(batch, state, 44f, 591f);
 
-        font.draw(
-            batch,
-            "O2",
-            42f,
-            659f
-        );
+        drawResource(batch, "GELO", status.getIce(), 414f);
+        drawResource(batch, "AGUA", status.getWater(), 580f);
+        drawResource(batch, "H2", status.getFuel(), 746f);
 
-        font.draw(
-            batch,
-            (int) status.getOxygen()
-                + "%",
-            308f,
-            659f
-        );
+        label(fonts.label, UiTheme.CYAN_SOFT);
+        fonts.label.draw(batch, "OBJETIVO DE EXTRACAO", 938f, 678f);
+        label(fonts.micro, UiTheme.MUTED);
+        fonts.micro.draw(batch, formatTime(missionTime), 1164f, 678f, 66f, Align.right, false);
 
-        font.draw(
-            batch,
-            "ENERGIA",
-            42f,
-            628f
-        );
+        label(fonts.body, UiTheme.TEXT);
+        fonts.body.draw(batch,
+            "AGUA " + status.getWater() + "/" + mission.getRequiredWater()
+                + "   H2 " + status.getFuel() + "/" + mission.getRequiredFuel(),
+            938f, 646f);
 
-        font.draw(
-            batch,
-            (int) status.getEnergy()
-                + "%",
-            308f,
-            628f
-        );
+        label(fonts.micro, portal.isActive() ? UiTheme.PURPLE : UiTheme.MUTED);
+        fonts.micro.draw(batch,
+            portal.isActive() ? "PORTAL ONLINE // DIRIJA-SE A EXTRACAO" : "PORTAL BLOQUEADO",
+            938f, 618f);
 
-        font.getData()
-            .setScale(
-                0.70f
-            );
+        label(fonts.micro, UiTheme.MUTED);
+        fonts.micro.draw(batch, "WASD  MOVER", 42f, 41f);
+        fonts.micro.draw(batch, "SHIFT  CORRER", 142f, 41f);
+        fonts.micro.draw(batch, "ESC  PAUSA", 276f, 41f);
 
-        if (
-            base.isPlayerInside(
-                player
-            )
-        ) {
-
-            font.setColor(
-                new Color(
-                    0.20f,
-                    0.95f,
-                    0.60f,
-                    1f
-                )
-            );
-
-            font.draw(
-                batch,
-                "BASE SEGURA",
-                42f,
-                607f
-            );
-
-        } else {
-
-            font.setColor(
-                new Color(
-                    0.55f,
-                    0.68f,
-                    0.72f,
-                    1f
-                )
-            );
-
-            font.draw(
-                batch,
-                "SUPERFICIE LUNAR",
-                42f,
-                607f
-            );
-        }
-
-        renderResourceText(
-            batch,
-            "GELO",
-            status.getIce(),
-            446f
-        );
-
-        renderResourceText(
-            batch,
-            "AGUA",
-            status.getWater(),
-            584f
-        );
-
-        renderResourceText(
-            batch,
-            "H2",
-            status.getFuel(),
-            722f
-        );
-
-        font.getData()
-            .setScale(
-                0.74f
-            );
-
-        font.setColor(
-            new Color(
-                0.42f,
-                0.66f,
-                0.74f,
-                1f
-            )
-        );
-
-        font.draw(
-            batch,
-            "MISSAO",
-            920f,
-            678f
-        );
-
-        font.setColor(
-            Color.WHITE
-        );
-
-        font.draw(
-            batch,
-            "AGUA "
-                + status.getWater()
-                + "/"
-                + mission.getRequiredWater()
-                + "   H2 "
-                + status.getFuel()
-                + "/"
-                + mission.getRequiredFuel(),
-            920f,
-            652f
-        );
-
-        font.setColor(
-            portal.isActive()
-                ? new Color(
-                0.63f,
-                0.48f,
-                1f,
-                1f
-            )
-                : new Color(
-                0.55f,
-                0.65f,
-                0.70f,
-                1f
-            )
-        );
-
-        font.draw(
-            batch,
-            portal.isActive()
-                ? "PORTAL ONLINE"
-                : "PORTAL BLOQUEADO",
-            920f,
-            632f
-        );
-
-        font.setColor(
-            new Color(
-                0.46f,
-                0.59f,
-                0.64f,
-                1f
-            )
-        );
-
-        font.draw(
-            batch,
-            formatTime(
-                missionTime
-            ),
-            1175f,
-            678f
-        );
-
-        if (
-            base.isPlayerInside(
-                player
-            )
-        ) {
-
-            font.getData()
-                .setScale(
-                    0.82f
-                );
-
-            font.setColor(
-                new Color(
-                    0.01f,
-                    0.10f,
-                    0.14f,
-                    1f
-                )
-            );
-
-            font.draw(
-                batch,
-                "E",
-                456f,
-                54f
-            );
-
-            font.setColor(
-                Color.WHITE
-            );
-
-            font.draw(
-                batch,
-                status.getIce() > 0
-                    ? "PROCESSAR GELO"
-                    : "SEM GELO PARA PROCESSAR",
-                496f,
-                54f
-            );
-        }
-
-        font.getData()
-            .setScale(
-                0.65f
-            );
-
-        font.setColor(
-            new Color(
-                0.55f,
-                0.63f,
-                0.66f,
-                1f
-            )
-        );
-
-        font.draw(
-            batch,
-            "WASD MOVER   |   ESC PAUSAR",
-            30f,
-            36f
-        );
-
-        if (
-            !base.isPlayerInside(player)
-                &&
-                processor.getLastMessage() != null
-        ) {
-
-            font.setColor(
-                new Color(
-                    0.48f,
-                    0.58f,
-                    0.62f,
-                    1f
-                )
-            );
-
-            font.draw(
-                batch,
-                processor.getLastMessage(),
-                360f,
-                35f,
-                560f,
-                Align.center,
-                false
-            );
+        if (insideBase) {
+            label(fonts.label, UiTheme.PANEL_SOLID);
+            fonts.label.draw(batch, "E", 422f, 61f, 32f, Align.center, false);
+            label(fonts.label, UiTheme.TEXT);
+            fonts.label.draw(batch,
+                status.getIce() > 0 ? "PROCESSAR GELO" : "SEM GELO NO INVENTARIO",
+                474f, 62f);
+            label(fonts.micro, UiTheme.MUTED);
+            fonts.micro.draw(batch, "CONVERSAO: GELO > AGUA + H2 + O2", 474f, 42f);
+        } else if (processor.getLastMessage() != null) {
+            label(fonts.micro, UiTheme.CYAN_SOFT);
+            fonts.micro.draw(batch, processor.getLastMessage(), 420f, 48f,
+                440f, Align.center, false);
         }
 
         batch.end();
     }
 
-    private void renderResourceText(
-        SpriteBatch batch,
-        String label,
-        int value,
-        float x
-    ) {
-
-        font.getData()
-            .setScale(
-                0.65f
-            );
-
-        font.setColor(
-            new Color(
-                0.43f,
-                0.62f,
-                0.68f,
-                1f
-            )
-        );
-
-        font.draw(
-            batch,
-            label,
-            x,
-            681f
-        );
-
-        font.getData()
-            .setScale(
-                0.92f
-            );
-
-        font.setColor(
-            Color.WHITE
-        );
-
-        font.draw(
-            batch,
-            String.valueOf(
-                value
-            ),
-            x,
-            660f
-        );
+    private void drawResource(SpriteBatch batch, String name, int value, float x) {
+        label(fonts.micro, UiTheme.MUTED);
+        fonts.micro.draw(batch, name, x, 680f);
+        label(fonts.heading, UiTheme.TEXT);
+        fonts.heading.draw(batch, String.valueOf(value), x, 654f);
     }
 
-    private void renderPauseOverlay(
-        SpriteBatch batch
-    ) {
-
-        shapes.begin(
-            ShapeRenderer.ShapeType.Filled
-        );
-
-        shapes.setColor(
-            0f,
-            0f,
-            0f,
-            0.74f
-        );
-
-        shapes.rect(
-            0f,
-            0f,
-            WIDTH,
-            HEIGHT
-        );
-
-        shapes.setColor(
-            0.015f,
-            0.045f,
-            0.068f,
-            0.98f
-        );
-
-        shapes.rect(
-            430f,
-            245f,
-            420f,
-            230f
-        );
-
-        shapes.setColor(
-            0.05f,
-            0.82f,
-            1f,
-            1f
-        );
-
-        shapes.rect(
-            430f,
-            471f,
-            420f,
-            4f
-        );
-
-        shapes.end();
+    private void label(BitmapFont font, Color color) {
+        font.setColor(color);
     }
 
-    private void renderGameOverOverlay(
-        SpriteBatch batch
-    ) {
-
-        shapes.begin(
-            ShapeRenderer.ShapeType.Filled
-        );
-
-        shapes.setColor(
-            0f,
-            0f,
-            0f,
-            0.80f
-        );
-
-        shapes.rect(
-            0f,
-            0f,
-            WIDTH,
-            HEIGHT
-        );
-
-        shapes.setColor(
-            0.095f,
-            0.015f,
-            0.02f,
-            0.98f
-        );
-
-        shapes.rect(
-            390f,
-            250f,
-            500f,
-            220f
-        );
-
-        shapes.setColor(
-            1f,
-            0.18f,
-            0.18f,
-            1f
-        );
-
-        shapes.rect(
-            390f,
-            466f,
-            500f,
-            4f
-        );
-
-        shapes.end();
-    }
-
-    public void renderPauseText(
-        SpriteBatch batch
-    ) {
-
+    public void renderPauseText(SpriteBatch batch) {
+        batch.setProjectionMatrix(camera.combined);
         batch.begin();
-
-        font.getData()
-            .setScale(
-                1.8f
-            );
-
-        font.setColor(
-            Color.WHITE
-        );
-
-        font.draw(
-            batch,
-            "PAUSADO",
-            0f,
-            410f,
-            WIDTH,
-            Align.center,
-            false
-        );
-
-        font.getData()
-            .setScale(
-                0.85f
-            );
-
-        font.setColor(
-            Color.LIGHT_GRAY
-        );
-
-        font.draw(
-            batch,
-            "ESC   CONTINUAR",
-            0f,
-            350f,
-            WIDTH,
-            Align.center,
-            false
-        );
-
-        font.draw(
-            batch,
-            "M     VOLTAR AO MENU",
-            0f,
-            315f,
-            WIDTH,
-            Align.center,
-            false
-        );
-
+        label(fonts.micro, UiTheme.CYAN);
+        fonts.micro.draw(batch, "SISTEMA EVA // ESTADO SEGURO", 0f, 455f,
+            WIDTH, Align.center, false);
+        label(fonts.heading, UiTheme.TEXT);
+        fonts.heading.draw(batch, "MISSAO PAUSADA", 0f, 410f,
+            WIDTH, Align.center, false);
+        label(fonts.body, UiTheme.MUTED);
+        fonts.body.draw(batch, "A telemetria foi temporariamente suspensa.", 0f, 365f,
+            WIDTH, Align.center, false);
+        drawKeyLine(batch, "ESC", "RETOMAR MISSAO", 320f);
+        drawKeyLine(batch, "M", "ABORTAR E VOLTAR AO MENU", 282f);
         batch.end();
     }
 
-    public void renderGameOverText(
-        SpriteBatch batch
-    ) {
-
+    public void renderGameOverText(SpriteBatch batch) {
+        batch.setProjectionMatrix(camera.combined);
         batch.begin();
-
-        font.getData()
-            .setScale(
-                1.85f
-            );
-
-        font.setColor(
-            new Color(
-                1f,
-                0.18f,
-                0.18f,
-                1f
-            )
-        );
-
-        font.draw(
-            batch,
-            "MISSAO FALHOU",
-            0f,
-            405f,
-            WIDTH,
-            Align.center,
-            false
-        );
-
-        font.getData()
-            .setScale(
-                0.86f
-            );
-
-        font.setColor(
-            Color.WHITE
-        );
-
-        font.draw(
-            batch,
-            "RESERVA DE OXIGENIO ESGOTADA",
-            0f,
-            355f,
-            WIDTH,
-            Align.center,
-            false
-        );
-
-        font.setColor(
-            Color.LIGHT_GRAY
-        );
-
-        font.draw(
-            batch,
-            "R  REINICIAR     |     M  MENU",
-            0f,
-            310f,
-            WIDTH,
-            Align.center,
-            false
-        );
-
+        label(fonts.micro, UiTheme.DANGER);
+        fonts.micro.draw(batch, "ALERTA CRITICO // SUPORTE DE VIDA", 0f, 455f,
+            WIDTH, Align.center, false);
+        label(fonts.heading, UiTheme.TEXT);
+        fonts.heading.draw(batch, "MISSAO ENCERRADA", 0f, 410f,
+            WIDTH, Align.center, false);
+        label(fonts.body, UiTheme.MUTED);
+        fonts.body.draw(batch, "Reserva de oxigenio esgotada.", 0f, 365f,
+            WIDTH, Align.center, false);
+        drawKeyLine(batch, "R", "REINICIAR PROTOCOLO", 320f);
+        drawKeyLine(batch, "M", "VOLTAR AO MENU", 282f);
         batch.end();
     }
 
-    private String formatTime(
-        float seconds
-    ) {
+    private void drawKeyLine(SpriteBatch batch, String key, String action, float y) {
+        label(fonts.label, UiTheme.CYAN);
+        fonts.label.draw(batch, "[ " + key + " ]", 470f, y);
+        label(fonts.label, UiTheme.TEXT);
+        fonts.label.draw(batch, action, 555f, y);
+    }
 
-        int total =
-            (int) seconds;
-
-        int minutes =
-            total / 60;
-
-        int remaining =
-            total % 60;
-
-        return String.format(
-            "%02d:%02d",
-            minutes,
-            remaining
-        );
+    private String formatTime(float seconds) {
+        int total = (int) seconds;
+        return String.format("%02d:%02d", total / 60, total % 60);
     }
 
     private void enableBlend() {
-
-        Gdx.gl.glEnable(
-            GL20.GL_BLEND
-        );
-
-        Gdx.gl.glBlendFunc(
-            GL20.GL_SRC_ALPHA,
-            GL20.GL_ONE_MINUS_SRC_ALPHA
-        );
+        Gdx.gl.glEnable(GL20.GL_BLEND);
+        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
     }
 
     private void disableBlend() {
-
-        Gdx.gl.glDisable(
-            GL20.GL_BLEND
-        );
+        Gdx.gl.glDisable(GL20.GL_BLEND);
     }
 
-    public void resize(
-        int width,
-        int height
-    ) {
-
-        viewport.update(
-            width,
-            height,
-            true
-        );
+    public void resize(int width, int height) {
+        viewport.update(width, height, true);
     }
 
     public void dispose() {
-
         shapes.dispose();
-
-        font.dispose();
+        fonts.close();
     }
 }

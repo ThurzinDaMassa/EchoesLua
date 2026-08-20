@@ -11,45 +11,35 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
 import com.orion.echoes.lua.LunarEchoesGame;
+import com.orion.echoes.lua.ui.UiFonts;
+import com.orion.echoes.lua.ui.UiTheme;
 
 public class VictoryScreen extends ScreenAdapter {
-
-    private static final float WIDTH =
-        1280f;
-
-    private static final float HEIGHT =
-        720f;
+    private static final float WIDTH = 1280f;
+    private static final float HEIGHT = 720f;
 
     private final LunarEchoesGame game;
-
     private final SpriteBatch batch;
-
     private final float missionTime;
-
     private final int water;
-
     private final int fuel;
-
     private final int collectedItems;
-
     private final float oxygen;
+    private final int score;
+    private final int bestScore;
+    private final boolean newRecord;
 
     private OrthographicCamera camera;
-
     private Viewport viewport;
-
     private ShapeRenderer shapes;
-
-    private BitmapFont font;
-
+    private UiFonts fonts;
     private Texture portalTexture;
-
     private float animationTime;
-
     private boolean changingScreen;
 
     public VictoryScreen(
@@ -58,365 +48,207 @@ public class VictoryScreen extends ScreenAdapter {
         int water,
         int fuel,
         int collectedItems,
-        float oxygen
+        float oxygen,
+        int score,
+        int bestScore,
+        boolean newRecord
     ) {
-
         this.game = game;
-
-        this.batch =
-            game.getBatch();
-
-        this.missionTime =
-            missionTime;
-
-        this.water =
-            water;
-
-        this.fuel =
-            fuel;
-
-        this.collectedItems =
-            collectedItems;
-
-        this.oxygen =
-            oxygen;
+        batch = game.getBatch();
+        this.missionTime = missionTime;
+        this.water = water;
+        this.fuel = fuel;
+        this.collectedItems = collectedItems;
+        this.oxygen = oxygen;
+        this.score = score;
+        this.bestScore = bestScore;
+        this.newRecord = newRecord;
     }
 
     @Override
     public void show() {
-
         changingScreen = false;
-
         animationTime = 0f;
-
-        camera =
-            new OrthographicCamera();
-
-        viewport =
-            new FitViewport(
-                WIDTH,
-                HEIGHT,
-                camera
-            );
-
-        camera.position.set(
-            WIDTH / 2f,
-            HEIGHT / 2f,
-            0f
-        );
-
+        camera = new OrthographicCamera();
+        viewport = new FitViewport(WIDTH, HEIGHT, camera);
+        camera.position.set(WIDTH / 2f, HEIGHT / 2f, 0f);
         camera.update();
-
-        shapes =
-            new ShapeRenderer();
-
-        font =
-            new BitmapFont();
-
-        font.getRegion()
-            .getTexture()
-            .setFilter(
-                Texture.TextureFilter.Linear,
-                Texture.TextureFilter.Linear
-            );
-
-        portalTexture =
-            game.getAssets()
-                .getPortal();
-
-        game.getAudio()
-            .playVictory();
+        shapes = new ShapeRenderer();
+        fonts = new UiFonts();
+        portalTexture = game.getAssets().getPortal();
+        game.getAudio().playVictory();
     }
 
     @Override
-    public void render(
-        float delta
-    ) {
-
-        if (changingScreen) {
-            return;
-        }
-
-        animationTime +=
-            delta;
-
+    public void render(float delta) {
+        if (changingScreen) return;
+        animationTime += delta;
         handleInput();
-
-        if (changingScreen) {
-            return;
-        }
-
+        if (changingScreen) return;
         clear();
-
-        renderBackground();
-
-        renderPortal();
-
-        renderText();
+        drawBackground();
+        drawPortal();
+        drawResultsPanel();
+        drawResultsText();
     }
 
     private void handleInput() {
-
-        if (
-            Gdx.input.isKeyJustPressed(
-                Input.Keys.R
-            )
-        ) {
-
+        if (Gdx.input.isKeyJustPressed(Input.Keys.R)) {
             changingScreen = true;
-
-            game.getAudio()
-                .playMenuClick();
-
-            game.setScreen(
-                new LunarScreen(
-                    game
-                )
-            );
-
+            game.getAudio().playMenuClick();
+            game.changeScreen(new LunarScreen(game));
             return;
         }
-
-        if (
-            Gdx.input.isKeyJustPressed(
-                Input.Keys.M
-            )
-                ||
-                Gdx.input.isKeyJustPressed(
-                    Input.Keys.ESCAPE
-                )
-        ) {
-
+        if (Gdx.input.isKeyJustPressed(Input.Keys.M)
+            || Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
             changingScreen = true;
-
-            game.getAudio()
-                .playMenuClick();
-
-            game.setScreen(
-                new MenuScreen(
-                    game
-                )
-            );
+            game.getAudio().playMenuClick();
+            game.changeScreen(new MenuScreen(game));
         }
     }
 
     private void clear() {
-
-        Gdx.gl.glClearColor(
-            0.004f,
-            0.010f,
-            0.018f,
-            1f
-        );
-
-        Gdx.gl.glClear(
-            GL20.GL_COLOR_BUFFER_BIT
-        );
+        Gdx.gl.glClearColor(UiTheme.SPACE.r, UiTheme.SPACE.g, UiTheme.SPACE.b, 1f);
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
     }
 
-    private void renderBackground() {
+    private void drawBackground() {
+        enableBlend();
+        shapes.setProjectionMatrix(camera.combined);
+        shapes.begin(ShapeRenderer.ShapeType.Filled);
+        shapes.setColor(UiTheme.SPACE);
+        shapes.rect(0f, 0f, WIDTH, HEIGHT);
 
-        shapes.setProjectionMatrix(
-            camera.combined
-        );
+        for (int i = 0; i < 72; i++) {
+            float x = (i * 173f + 71f) % WIDTH;
+            float y = (i * 97f + 43f) % HEIGHT;
+            float pulse = 0.18f + MathUtils.sin(animationTime * 1.3f + i) * 0.08f;
+            shapes.setColor(0.35f, 0.66f, 0.88f, pulse);
+            shapes.circle(x, y, i % 5 == 0 ? 1.5f : 0.8f, 8);
+        }
 
-        shapes.begin(
-            ShapeRenderer.ShapeType.Filled
-        );
-
-        shapes.setColor(
-            0.004f,
-            0.010f,
-            0.018f,
-            1f
-        );
-
-        shapes.rect(
-            0f,
-            0f,
-            WIDTH,
-            HEIGHT
-        );
-
+        shapes.setColor(0.04f, 0.16f, 0.24f, 0.34f);
+        shapes.circle(1010f, 362f, 285f, 72);
+        shapes.setColor(0.008f, 0.032f, 0.058f, 0.92f);
+        shapes.circle(1010f, 362f, 228f, 72);
         shapes.end();
+        disableBlend();
     }
 
-    private void renderPortal() {
-
-        float pulse =
-            0.78f
-                +
-                MathUtils.sin(
-                    animationTime
-                        * 2.5f
-                )
-                    * 0.10f;
-
-        batch.setProjectionMatrix(
-            camera.combined
-        );
-
+    private void drawPortal() {
+        float pulse = 0.94f + MathUtils.sin(animationTime * 2.4f) * 0.04f;
+        batch.setProjectionMatrix(camera.combined);
         batch.begin();
-
-        batch.setColor(
-            1f,
-            1f,
-            1f,
-            pulse
-        );
-
-        batch.draw(
-            portalTexture,
-            790f,
-            55f,
-            400f,
-            545f
-        );
-
-        batch.setColor(
-            Color.WHITE
-        );
-
+        batch.setColor(1f, 1f, 1f, pulse);
+        batch.draw(portalTexture, 808f, 75f, 382f, 520f);
+        batch.setColor(Color.WHITE);
         batch.end();
     }
 
-    private void renderText() {
+    private void drawResultsPanel() {
+        enableBlend();
+        shapes.begin(ShapeRenderer.ShapeType.Filled);
+        UiTheme.panel(shapes, 54f, 52f, 650f, 616f,
+            newRecord ? UiTheme.GREEN : UiTheme.CYAN);
 
+        shapes.setColor(UiTheme.PANEL_LIGHT);
+        shapes.rect(86f, 273f, 174f, 86f);
+        shapes.rect(276f, 273f, 174f, 86f);
+        shapes.rect(466f, 273f, 206f, 86f);
+
+        shapes.setColor(UiTheme.BORDER);
+        shapes.rect(86f, 392f, 586f, 1f);
+
+        shapes.setColor(UiTheme.PANEL_LIGHT);
+        shapes.rect(86f, 105f, 276f, 58f);
+        shapes.rect(378f, 105f, 294f, 58f);
+        shapes.setColor(UiTheme.CYAN);
+        shapes.rect(86f, 105f, 4f, 58f);
+        shapes.setColor(UiTheme.BORDER);
+        shapes.rect(378f, 105f, 4f, 58f);
+        shapes.end();
+        disableBlend();
+    }
+
+    private void drawResultsText() {
+        batch.setProjectionMatrix(camera.combined);
         batch.begin();
 
-        font.getData()
-            .setScale(
-                2f
-            );
+        set(fonts.micro, newRecord ? UiTheme.GREEN : UiTheme.CYAN);
+        fonts.micro.draw(batch,
+            newRecord ? "NOVO RECORDE // EXTRAÇÃO CONFIRMADA" : "EXTRACAO CONFIRMADA // SINAL ESTAVEL",
+            86f, 628f);
+        set(fonts.heading, UiTheme.TEXT);
+        fonts.heading.draw(batch, "MISSAO CONCLUIDA", 86f, 583f);
+        set(fonts.body, UiTheme.MUTED);
+        fonts.body.draw(batch, "A tripulacao e os recursos foram recuperados.", 86f, 546f);
 
-        font.setColor(
-            Color.WHITE
-        );
+        set(fonts.micro, UiTheme.CYAN_SOFT);
+        fonts.micro.draw(batch, "PONTUACAO DA MISSAO", 86f, 482f);
+        set(fonts.display, newRecord ? UiTheme.GREEN : UiTheme.TEXT);
+        fonts.display.draw(batch, String.valueOf(score), 82f, 438f);
+        set(fonts.micro, UiTheme.MUTED);
+        fonts.micro.draw(batch, "MELHOR REGISTRO  " + bestScore, 430f, 438f,
+            242f, Align.right, false);
 
-        font.draw(
-            batch,
-            "MISSAO CONCLUIDA",
-            100f,
-            570f
-        );
+        stat("TEMPO", formatTime(missionTime), 104f);
+        stat("ITENS", String.valueOf(collectedItems), 294f);
+        stat("O2 RESIDUAL", Math.round(oxygen) + "%", 484f);
 
-        font.getData()
-            .setScale(
-                1f
-            );
+        set(fonts.micro, UiTheme.MUTED);
+        fonts.micro.draw(batch, "CARGA PROCESSADA", 86f, 235f);
+        set(fonts.body, UiTheme.TEXT);
+        fonts.body.draw(batch, "AGUA  " + water + "     H2  " + fuel, 86f, 202f);
 
-        font.setColor(
-            Color.LIGHT_GRAY
-        );
+        set(fonts.label, UiTheme.CYAN);
+        fonts.label.draw(batch, "[ R ]", 108f, 141f);
+        set(fonts.label, UiTheme.TEXT);
+        fonts.label.draw(batch, "NOVA MISSAO", 170f, 141f);
+        set(fonts.label, UiTheme.CYAN_SOFT);
+        fonts.label.draw(batch, "[ M ]", 400f, 141f);
+        set(fonts.label, UiTheme.TEXT);
+        fonts.label.draw(batch, "MENU PRINCIPAL", 462f, 141f);
 
-        font.draw(
-            batch,
-            "Tempo: "
-                + formatTime(
-                missionTime
-            ),
-            100f,
-            450f
-        );
-
-        font.draw(
-            batch,
-            "Itens coletados: "
-                + collectedItems,
-            100f,
-            410f
-        );
-
-        font.draw(
-            batch,
-            "Agua: "
-                + water,
-            100f,
-            370f
-        );
-
-        font.draw(
-            batch,
-            "H2: "
-                + fuel,
-            100f,
-            330f
-        );
-
-        font.draw(
-            batch,
-            "O2 final: "
-                + (int) oxygen
-                + "%",
-            100f,
-            290f
-        );
-
-        font.draw(
-            batch,
-            "R - Nova missao",
-            100f,
-            180f
-        );
-
-        font.draw(
-            batch,
-            "M - Menu principal",
-            100f,
-            140f
-        );
-
+        set(fonts.micro, UiTheme.CYAN_SOFT);
+        fonts.micro.draw(batch, "PORTAL DE RETORNO // ESTAVEL", 850f, 640f);
+        set(fonts.micro, UiTheme.MUTED);
+        fonts.micro.draw(batch, "ORION DEEP SPACE PROGRAM", 878f, 46f);
         batch.end();
     }
 
-    private String formatTime(
-        float seconds
-    ) {
+    private void stat(String label, String value, float x) {
+        set(fonts.micro, UiTheme.MUTED);
+        fonts.micro.draw(batch, label, x, 337f);
+        set(fonts.heading, UiTheme.TEXT);
+        fonts.heading.draw(batch, value, x, 305f);
+    }
 
-        int total =
-            (int) seconds;
+    private String formatTime(float seconds) {
+        int total = (int) seconds;
+        return String.format("%02d:%02d", total / 60, total % 60);
+    }
 
-        int minutes =
-            total / 60;
+    private void set(BitmapFont font, Color color) {
+        font.setColor(color);
+    }
 
-        int secondsLeft =
-            total % 60;
+    private void enableBlend() {
+        Gdx.gl.glEnable(GL20.GL_BLEND);
+        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+    }
 
-        return String.format(
-            "%02d:%02d",
-            minutes,
-            secondsLeft
-        );
+    private void disableBlend() {
+        Gdx.gl.glDisable(GL20.GL_BLEND);
     }
 
     @Override
-    public void resize(
-        int width,
-        int height
-    ) {
-
-        viewport.update(
-            width,
-            height,
-            true
-        );
+    public void resize(int width, int height) {
+        viewport.update(width, height, true);
     }
 
     @Override
     public void dispose() {
-
-        if (
-            shapes != null
-        ) {
-
-            shapes.dispose();
-        }
-
-        if (
-            font != null
-        ) {
-
-            font.dispose();
-        }
+        if (shapes != null) shapes.dispose();
+        if (fonts != null) fonts.close();
     }
 }

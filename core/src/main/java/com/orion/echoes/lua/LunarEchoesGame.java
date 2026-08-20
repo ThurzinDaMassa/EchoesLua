@@ -1,10 +1,13 @@
 package com.orion.echoes.lua;
 
 import com.badlogic.gdx.Game;
+import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 
 import com.orion.echoes.lua.assets.GameAssets;
 import com.orion.echoes.lua.audio.AudioManager;
+import com.orion.echoes.lua.config.GameSettings;
+import com.orion.echoes.lua.progress.GameProgress;
 import com.orion.echoes.lua.screens.MenuScreen;
 
 public class LunarEchoesGame extends Game {
@@ -14,6 +17,10 @@ public class LunarEchoesGame extends Game {
     private GameAssets assets;
 
     private AudioManager audioManager;
+
+    private GameSettings settings;
+
+    private GameProgress progress;
 
     @Override
     public void create() {
@@ -26,10 +33,18 @@ public class LunarEchoesGame extends Game {
 
         assets.loadAll();
 
+        settings = new GameSettings();
+
+        settings.applyDisplayMode();
+
+        progress = new GameProgress();
+
         audioManager =
             new AudioManager();
 
         audioManager.load();
+
+        settings.applyTo(audioManager);
 
         setScreen(
             new MenuScreen(
@@ -48,6 +63,22 @@ public class LunarEchoesGame extends Game {
 
     public AudioManager getAudio() {
         return audioManager;
+    }
+
+    public GameSettings getSettings() {
+        return settings;
+    }
+
+    public GameProgress getProgress() {
+        return progress;
+    }
+
+    public void changeScreen(Screen nextScreen) {
+        Screen previousScreen = getScreen();
+        setScreen(nextScreen);
+        if (previousScreen != null) {
+            previousScreen.dispose();
+        }
     }
 
     @Override

@@ -18,955 +18,412 @@ import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
 import com.orion.echoes.lua.LunarEchoesGame;
+import com.orion.echoes.lua.config.Difficulty;
+import com.orion.echoes.lua.ui.UiFonts;
+import com.orion.echoes.lua.ui.UiTheme;
 
 public class MenuScreen extends ScreenAdapter {
-
     private static final float WIDTH = 1280f;
     private static final float HEIGHT = 720f;
-
-    private static final int STAR_COUNT = 90;
+    private static final int STAR_COUNT = 110;
 
     private final LunarEchoesGame game;
     private final SpriteBatch batch;
+    private final Vector2 mouse = new Vector2();
+    private final Rectangle playButton = new Rectangle(86f, 294f, 420f, 58f);
+    private final Rectangle instructionsButton = new Rectangle(86f, 222f, 420f, 58f);
+    private final Rectangle optionsButton = new Rectangle(86f, 150f, 420f, 58f);
+    private final Rectangle exitButton = new Rectangle(86f, 78f, 420f, 58f);
+    private final float[] starX = new float[STAR_COUNT];
+    private final float[] starY = new float[STAR_COUNT];
+    private final float[] starSize = new float[STAR_COUNT];
 
     private OrthographicCamera camera;
     private Viewport viewport;
-
     private ShapeRenderer shapes;
-    private BitmapFont font;
-
+    private UiFonts fonts;
     private Texture portalTexture;
-
-    private final Rectangle playButton =
-        new Rectangle(
-            110f,
-            275f,
-            300f,
-            62f
-        );
-
-    private final Rectangle instructionsButton =
-        new Rectangle(
-            110f,
-            195f,
-            300f,
-            62f
-        );
-
-    private final Rectangle exitButton =
-        new Rectangle(
-            110f,
-            115f,
-            300f,
-            62f
-        );
-
-    private final Vector2 mousePosition =
-        new Vector2();
-
-    private final float[] starX =
-        new float[STAR_COUNT];
-
-    private final float[] starY =
-        new float[STAR_COUNT];
-
-    private final float[] starSize =
-        new float[STAR_COUNT];
-
     private float animationTime;
-
     private boolean instructionsOpen;
+    private boolean optionsOpen;
     private boolean changingScreen;
+    private int hoveredButton = -1;
 
-    public MenuScreen(
-        LunarEchoesGame game
-    ) {
-
+    public MenuScreen(LunarEchoesGame game) {
         this.game = game;
-        this.batch = game.getBatch();
+        batch = game.getBatch();
     }
 
     @Override
     public void show() {
-
-        camera =
-            new OrthographicCamera();
-
-        viewport =
-            new FitViewport(
-                WIDTH,
-                HEIGHT,
-                camera
-            );
-
-        camera.position.set(
-            WIDTH / 2f,
-            HEIGHT / 2f,
-            0f
-        );
-
+        camera = new OrthographicCamera();
+        viewport = new FitViewport(WIDTH, HEIGHT, camera);
+        camera.position.set(WIDTH / 2f, HEIGHT / 2f, 0f);
         camera.update();
-
-        shapes =
-            new ShapeRenderer();
-
-        font =
-            new BitmapFont();
-
-        font.getRegion()
-            .getTexture()
-            .setFilter(
-                Texture.TextureFilter.Linear,
-                Texture.TextureFilter.Linear
-            );
-
-        portalTexture =
-            game.getAssets()
-                .getPortal();
-
+        shapes = new ShapeRenderer();
+        fonts = new UiFonts();
+        portalTexture = game.getAssets().getPortal();
         animationTime = 0f;
-
         instructionsOpen = false;
+        optionsOpen = false;
         changingScreen = false;
-
         createStars();
+        game.getAudio().playAmbientMusic();
     }
 
     private void createStars() {
-
-        for (
-            int i = 0;
-            i < STAR_COUNT;
-            i++
-        ) {
-
-            starX[i] =
-                MathUtils.random(
-                    0f,
-                    WIDTH
-                );
-
-            starY[i] =
-                MathUtils.random(
-                    0f,
-                    HEIGHT
-                );
-
-            starSize[i] =
-                MathUtils.random(
-                    0.8f,
-                    2.4f
-                );
+        MathUtils.random.setSeed(73821L);
+        for (int i = 0; i < STAR_COUNT; i++) {
+            starX[i] = MathUtils.random(0f, WIDTH);
+            starY[i] = MathUtils.random(0f, HEIGHT);
+            starSize[i] = MathUtils.random(0.6f, 1.8f);
         }
     }
 
     @Override
-    public void render(
-        float delta
-    ) {
-
-        if (changingScreen) {
-            return;
-        }
-
-        animationTime += delta;
-
+    public void render(float delta) {
+        if (changingScreen) return;
+        animationTime += Math.min(delta, 1f / 20f);
         updateMouse();
-
+        updateHoverSound();
         handleInput();
-
-        /*
-         * IMPORTANTE:
-         *
-         * Se handleInput mudou de tela,
-         * paramos este frame imediatamente.
-         */
-        if (changingScreen) {
-            return;
-        }
+        if (changingScreen) return;
 
         clear();
+        drawBackground();
+        drawPortal();
+        drawMenuPanels();
+        drawMenuText();
 
-        renderSpaceBackground();
-
-        renderPortalDecoration();
-
-        renderMainPanel();
-
-        renderButtons();
-
-        renderTexts();
-
-        if (instructionsOpen) {
-            renderInstructions();
-        }
+        if (instructionsOpen) drawInstructions();
+        if (optionsOpen) drawOptions();
     }
 
     private void updateMouse() {
+        mouse.set(Gdx.input.getX(), Gdx.input.getY());
+        viewport.unproject(mouse);
+    }
 
-        mousePosition.set(
-            Gdx.input.getX(),
-            Gdx.input.getY()
-        );
+    private void updateHoverSound() {
+        if (instructionsOpen || optionsOpen) {
+            hoveredButton = -1;
+            return;
+        }
+        int current = buttonAt(mouse);
+        if (current >= 0 && current != hoveredButton) game.getAudio().playMenuHover();
+        hoveredButton = current;
+    }
 
-        viewport.unproject(
-            mousePosition
-        );
+    private int buttonAt(Vector2 point) {
+        if (playButton.contains(point)) return 0;
+        if (instructionsButton.contains(point)) return 1;
+        if (optionsButton.contains(point)) return 2;
+        if (exitButton.contains(point)) return 3;
+        return -1;
     }
 
     private void handleInput() {
-
+        if (optionsOpen) {
+            handleOptionsInput();
+            return;
+        }
         if (instructionsOpen) {
-
-            if (
-                Gdx.input.isKeyJustPressed(
-                    Input.Keys.ESCAPE
-                )
-            ) {
-
+            if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
                 instructionsOpen = false;
+                game.getAudio().playMenuClick();
             }
-
             return;
         }
 
-        if (
-            Gdx.input.isKeyJustPressed(
-                Input.Keys.ENTER
-            )
-        ) {
-
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
             startGame();
             return;
         }
-
-        if (
-            Gdx.input.isKeyJustPressed(
-                Input.Keys.I
-            )
-        ) {
-
+        if (Gdx.input.isKeyJustPressed(Input.Keys.I)) {
             instructionsOpen = true;
+            game.getAudio().playMenuClick();
             return;
         }
-
-        if (
-            Gdx.input.isKeyJustPressed(
-                Input.Keys.ESCAPE
-            )
-        ) {
-
+        if (Gdx.input.isKeyJustPressed(Input.Keys.O)) {
+            optionsOpen = true;
+            game.getAudio().playMenuClick();
+            return;
+        }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
             Gdx.app.exit();
             return;
         }
+        if (!Gdx.input.justTouched()) return;
 
-        if (
-            Gdx.input.justTouched()
-        ) {
-
-            if (
-                playButton.contains(
-                    mousePosition
-                )
-            ) {
-
-                startGame();
-                return;
-            }
-
-            if (
-                instructionsButton.contains(
-                    mousePosition
-                )
-            ) {
-
+        switch (buttonAt(mouse)) {
+            case 0 -> startGame();
+            case 1 -> {
                 instructionsOpen = true;
-                return;
+                game.getAudio().playMenuClick();
             }
-
-            if (
-                exitButton.contains(
-                    mousePosition
-                )
-            ) {
-
-                Gdx.app.exit();
+            case 2 -> {
+                optionsOpen = true;
+                game.getAudio().playMenuClick();
             }
+            case 3 -> Gdx.app.exit();
+            default -> { }
+        }
+    }
+
+    private void handleOptionsInput() {
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+            optionsOpen = false;
+            game.getAudio().playMenuClick();
+            return;
+        }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.LEFT)) {
+            game.getSettings().setDifficulty(game.getSettings().getDifficulty().previous());
+            game.getAudio().playMenuClick();
+        }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.RIGHT)) {
+            game.getSettings().setDifficulty(game.getSettings().getDifficulty().next());
+            game.getAudio().playMenuClick();
+        }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.UP)) {
+            game.getSettings().adjustMasterVolume(0.1f);
+            game.getSettings().applyTo(game.getAudio());
+            game.getAudio().playMenuClick();
+        }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.DOWN)) {
+            game.getSettings().adjustMasterVolume(-0.1f);
+            game.getSettings().applyTo(game.getAudio());
+            game.getAudio().playMenuClick();
+        }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.M)) {
+            game.getSettings().setMuted(!game.getSettings().isMuted());
+            game.getSettings().applyTo(game.getAudio());
+            game.getAudio().playMenuClick();
+        }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.F)) {
+            game.getSettings().toggleFullscreen();
         }
     }
 
     private void startGame() {
-
-        if (changingScreen) {
-            return;
-        }
-
+        if (changingScreen) return;
         changingScreen = true;
-
-        game.setScreen(
-            new LunarScreen(
-                game
-            )
-        );
-
-        /*
-         * NAO chamar dispose() aqui.
-         *
-         * Evita liberar recursos
-         * durante a troca de tela.
-         */
+        game.getAudio().playMenuClick();
+        game.changeScreen(new LunarScreen(game));
     }
 
     private void clear() {
-
-        Gdx.gl.glClearColor(
-            0.006f,
-            0.012f,
-            0.022f,
-            1f
-        );
-
-        Gdx.gl.glClear(
-            GL20.GL_COLOR_BUFFER_BIT
-        );
+        Gdx.gl.glClearColor(UiTheme.SPACE.r, UiTheme.SPACE.g, UiTheme.SPACE.b, 1f);
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
     }
 
-    private void renderSpaceBackground() {
+    private void drawBackground() {
+        enableBlend();
+        shapes.setProjectionMatrix(camera.combined);
+        shapes.begin(ShapeRenderer.ShapeType.Filled);
+        shapes.setColor(UiTheme.SPACE);
+        shapes.rect(0f, 0f, WIDTH, HEIGHT);
 
-        shapes.setProjectionMatrix(
-            camera.combined
-        );
-
-        shapes.begin(
-            ShapeRenderer.ShapeType.Filled
-        );
-
-        shapes.setColor(
-            0.006f,
-            0.012f,
-            0.022f,
-            1f
-        );
-
-        shapes.rect(
-            0f,
-            0f,
-            WIDTH,
-            HEIGHT
-        );
-
-        for (
-            int i = 0;
-            i < STAR_COUNT;
-            i++
-        ) {
-
-            float pulse =
-                0.45f
-                    +
-                    MathUtils.sin(
-                        animationTime
-                            * 1.5f
-                            + i
-                    )
-                        * 0.18f;
-
-            shapes.setColor(
-                0.55f,
-                0.78f,
-                1f,
-                pulse
-            );
-
-            shapes.circle(
-                starX[i],
-                starY[i],
-                starSize[i]
-            );
+        for (int i = 0; i < STAR_COUNT; i++) {
+            float alpha = 0.28f + MathUtils.sin(animationTime * 1.15f + i * 0.73f) * 0.15f;
+            shapes.setColor(0.42f, 0.72f, 0.92f, alpha);
+            shapes.circle(starX[i], starY[i], starSize[i], 8);
         }
 
-        shapes.setColor(
-            0.02f,
-            0.15f,
-            0.22f,
-            0.35f
-        );
+        shapes.setColor(0.025f, 0.13f, 0.19f, 0.42f);
+        shapes.circle(981f, 370f, 286f, 72);
+        shapes.setColor(0.008f, 0.035f, 0.062f, 0.95f);
+        shapes.circle(981f, 370f, 226f, 72);
 
-        shapes.circle(
-            1000f,
-            380f,
-            310f
-        );
-
-        shapes.setColor(
-            0.02f,
-            0.08f,
-            0.14f,
-            0.65f
-        );
-
-        shapes.circle(
-            1000f,
-            380f,
-            250f
-        );
-
+        shapes.setColor(0.04f, 0.22f, 0.29f, 0.16f);
+        for (int x = 600; x < 1280; x += 48) shapes.rect(x, 0f, 1f, HEIGHT);
+        for (int y = 0; y < 720; y += 48) shapes.rect(600f, y, 680f, 1f);
         shapes.end();
-    }
-
-    private void renderPortalDecoration() {
-
-        float pulse =
-            0.78f
-                +
-                MathUtils.sin(
-                    animationTime * 2f
-                )
-                    * 0.08f;
-
-        batch.setProjectionMatrix(
-            camera.combined
-        );
-
-        batch.begin();
-
-        batch.setColor(
-            1f,
-            1f,
-            1f,
-            pulse
-        );
-
-        batch.draw(
-            portalTexture,
-            785f,
-            90f,
-            390f,
-            520f
-        );
-
-        batch.setColor(
-            Color.WHITE
-        );
-
-        batch.end();
-    }
-
-    private void renderMainPanel() {
-
-        enableBlend();
-
-        shapes.begin(
-            ShapeRenderer.ShapeType.Filled
-        );
-
-        shapes.setColor(
-            0.015f,
-            0.035f,
-            0.055f,
-            0.94f
-        );
-
-        shapes.rect(
-            70f,
-            70f,
-            390f,
-            580f
-        );
-
-        shapes.setColor(
-            0.04f,
-            0.80f,
-            1f,
-            1f
-        );
-
-        shapes.rect(
-            70f,
-            646f,
-            390f,
-            4f
-        );
-
-        shapes.setColor(
-            0.02f,
-            0.22f,
-            0.32f,
-            1f
-        );
-
-        shapes.rect(
-            95f,
-            397f,
-            340f,
-            1f
-        );
-
-        shapes.end();
-
-        shapes.begin(
-            ShapeRenderer.ShapeType.Line
-        );
-
-        shapes.setColor(
-            0.04f,
-            0.34f,
-            0.46f,
-            1f
-        );
-
-        shapes.rect(
-            70f,
-            70f,
-            390f,
-            580f
-        );
-
-        shapes.end();
-
         disableBlend();
     }
 
-    private void renderButtons() {
-
-        renderButton(
-            playButton,
-            true
-        );
-
-        renderButton(
-            instructionsButton,
-            false
-        );
-
-        renderButton(
-            exitButton,
-            false
-        );
+    private void drawPortal() {
+        float pulse = 0.93f + MathUtils.sin(animationTime * 2f) * 0.035f;
+        batch.setProjectionMatrix(camera.combined);
+        batch.begin();
+        batch.setColor(1f, 1f, 1f, pulse);
+        batch.draw(portalTexture, 790f, 82f, 390f, 520f);
+        batch.setColor(Color.WHITE);
+        batch.end();
     }
 
-    private void renderButton(
-        Rectangle button,
-        boolean primary
-    ) {
+    private void drawMenuPanels() {
+        enableBlend();
+        shapes.begin(ShapeRenderer.ShapeType.Filled);
+        shapes.setColor(0.007f, 0.017f, 0.026f, 0.96f);
+        shapes.rect(48f, 42f, 500f, 636f);
+        shapes.setColor(UiTheme.BORDER);
+        shapes.rect(48f, 42f, 1f, 636f);
+        shapes.rect(547f, 42f, 1f, 636f);
+        shapes.setColor(UiTheme.CYAN);
+        shapes.rect(48f, 674f, 500f, 4f);
+        shapes.rect(48f, 674f, 82f, 4f);
 
-        boolean hovered =
-            button.contains(
-                mousePosition
-            );
-
-        shapes.begin(
-            ShapeRenderer.ShapeType.Filled
-        );
-
-        if (hovered) {
-
-            shapes.setColor(
-                0.025f,
-                0.22f,
-                0.30f,
-                1f
-            );
-
-        } else {
-
-            shapes.setColor(
-                0.025f,
-                0.075f,
-                0.105f,
-                1f
-            );
-        }
-
-        shapes.rect(
-            button.x,
-            button.y,
-            button.width,
-            button.height
-        );
-
-        if (primary) {
-
-            shapes.setColor(
-                0.05f,
-                0.86f,
-                1f,
-                1f
-            );
-
-        } else {
-
-            shapes.setColor(
-                0.04f,
-                0.38f,
-                0.50f,
-                1f
-            );
-        }
-
-        shapes.rect(
-            button.x,
-            button.y,
-            4f,
-            button.height
-        );
-
+        drawButton(playButton, 0, true);
+        drawButton(instructionsButton, 1, false);
+        drawButton(optionsButton, 2, false);
+        drawButton(exitButton, 3, false);
         shapes.end();
+        disableBlend();
     }
 
-    private void renderTexts() {
+    private void drawButton(Rectangle button, int index, boolean primary) {
+        boolean hover = hoveredButton == index;
+        shapes.setColor(hover ? UiTheme.PANEL_LIGHT : UiTheme.PANEL_SOLID);
+        shapes.rect(button.x, button.y, button.width, button.height);
+        shapes.setColor(primary || hover ? UiTheme.CYAN : UiTheme.BORDER);
+        shapes.rect(button.x, button.y, 4f, button.height);
+        shapes.rect(button.x, button.y + button.height - 1f, button.width, 1f);
+        if (hover) {
+            shapes.setColor(0.05f, 0.84f, 1f, 0.08f);
+            shapes.rect(button.x + 4f, button.y, button.width - 4f, button.height);
+        }
+    }
 
-        batch.setProjectionMatrix(
-            camera.combined
-        );
-
+    private void drawMenuText() {
+        batch.setProjectionMatrix(camera.combined);
         batch.begin();
 
-        font.getData()
-            .setScale(
-                2.15f
-            );
+        set(fonts.micro, UiTheme.CYAN_SOFT);
+        fonts.micro.draw(batch, "ORION DEEP SPACE PROGRAM // EVA-07", 86f, 640f);
+        set(fonts.display, UiTheme.TEXT);
+        fonts.display.draw(batch, "LUNAR", 82f, 583f);
+        set(fonts.display, UiTheme.CYAN);
+        fonts.display.draw(batch, "ECHOES", 82f, 530f);
 
-        font.setColor(
-            Color.WHITE
-        );
+        set(fonts.label, UiTheme.CYAN_SOFT);
+        fonts.label.draw(batch, "PROTOCOLO DE SOBREVIVENCIA LUNAR", 86f, 482f);
+        set(fonts.body, UiTheme.MUTED);
+        fonts.body.draw(batch,
+            "Explore. Recupere recursos.\nConverta gelo. Ative a extracao.",
+            86f, 447f, 410f, Align.left, true);
 
-        font.draw(
-            batch,
-            "LUNAR",
-            105f,
-            590f
-        );
+        buttonText("INICIAR MISSAO", "01", playButton);
+        buttonText("PROTOCOLO EVA", "02", instructionsButton);
+        buttonText("CONFIGURACOES", "03", optionsButton);
+        buttonText("ENCERRAR SISTEMA", "04", exitButton);
 
-        font.setColor(
-            0.05f,
-            0.86f,
-            1f,
-            1f
-        );
-
-        font.draw(
-            batch,
-            "ECHOES",
-            105f,
-            545f
-        );
-
-        font.getData()
-            .setScale(
-                0.90f
-            );
-
-        font.setColor(
-            0.45f,
-            0.62f,
-            0.70f,
-            1f
-        );
-
-        font.draw(
-            batch,
-            "LUNAR SURVIVAL PROTOCOL",
-            107f,
-            492f
-        );
-
-        font.getData()
-            .setScale(
-                0.78f
-            );
-
-        font.setColor(
-            Color.LIGHT_GRAY
-        );
-
-        font.draw(
-            batch,
-            "Explore a superficie lunar.",
-            107f,
-            455f
-        );
-
-        font.draw(
-            batch,
-            "Colete recursos.",
-            107f,
-            432f
-        );
-
-        font.draw(
-            batch,
-            "Ative o portal de extracao.",
-            107f,
-            409f
-        );
-
-        drawButtonText(
-            "INICIAR MISSAO",
-            playButton
-        );
-
-        drawButtonText(
-            "INSTRUCOES",
-            instructionsButton
-        );
-
-        drawButtonText(
-            "SAIR",
-            exitButton
-        );
-
-        font.getData()
-            .setScale(
-                0.68f
-            );
-
-        font.setColor(
-            0.35f,
-            0.48f,
-            0.55f,
-            1f
-        );
-
-        font.draw(
-            batch,
-            "ENTER - JOGAR",
-            110f,
-            95f
-        );
-
-        font.draw(
-            batch,
-            "EVA SYSTEM // ORION",
-            885f,
-            78f
-        );
+        set(fonts.micro, UiTheme.MUTED);
+        fonts.micro.draw(batch, "ENTER  INICIAR", 68f, 25f);
+        fonts.micro.draw(batch,
+            "MODO " + game.getSettings().getDifficulty().getLabel()
+                + "   //   RECORDE " + game.getProgress().getBestScore(),
+            770f, 42f, 430f, Align.right, false);
+        set(fonts.micro, UiTheme.CYAN_SOFT);
+        fonts.micro.draw(batch, "PORTAL DE EXTRACAO // ONLINE", 835f, 650f);
 
         batch.end();
     }
 
-    private void drawButtonText(
-        String text,
-        Rectangle button
-    ) {
-
-        font.getData()
-            .setScale(
-                1f
-            );
-
-        font.setColor(
-            Color.WHITE
-        );
-
-        font.draw(
-            batch,
-            text,
-            button.x,
-            button.y + 39f,
-            button.width,
-            Align.center,
-            false
-        );
+    private void buttonText(String text, String number, Rectangle button) {
+        set(fonts.micro, UiTheme.CYAN_SOFT);
+        fonts.micro.draw(batch, number, button.x + 22f, button.y + 35f);
+        set(fonts.label, UiTheme.TEXT);
+        fonts.label.draw(batch, text, button.x + 70f, button.y + 36f);
+        set(fonts.label, button.contains(mouse)
+            ? UiTheme.CYAN : UiTheme.MUTED);
+        fonts.label.draw(batch, ">", button.x + button.width - 42f, button.y + 36f);
     }
 
-    private void renderInstructions() {
+    private void drawInstructions() {
+        drawModalBase("PROTOCOLO EVA", "CONTROLES E OBJETIVO DA MISSAO");
+        batch.begin();
+        instructionRow("WASD / SETAS", "MOVIMENTO", 451f);
+        instructionRow("SHIFT", "CORRER // CONSOME ENERGIA", 403f);
+        instructionRow("E", "PROCESSAR GELO NA BASE", 355f);
+        instructionRow("ESC", "PAUSAR MISSAO", 307f);
+        instructionRow("R", "REINICIAR APOS FALHA", 259f);
+        set(fonts.label, UiTheme.CYAN);
+        fonts.label.draw(batch, "OBJETIVO", 356f, 207f);
+        set(fonts.body, UiTheme.TEXT);
+        fonts.body.draw(batch, "Produza agua e H2. Ative o portal. Extraia em seguranca.",
+            356f, 174f);
+        modalFooter("VOLTAR");
+        batch.end();
+    }
 
+    private void instructionRow(String key, String action, float y) {
+        set(fonts.label, UiTheme.CYAN);
+        fonts.label.draw(batch, "[ " + key + " ]", 356f, y);
+        set(fonts.body, UiTheme.TEXT);
+        fonts.body.draw(batch, action, 555f, y);
+    }
+
+    private void drawOptions() {
+        drawModalBase("CONFIGURACOES", "PERFIL LOCAL // SALVAMENTO AUTOMATICO");
+        Difficulty difficulty = game.getSettings().getDifficulty();
+        int volume = Math.round(game.getSettings().getMasterVolume() * 100f);
+
+        batch.begin();
+        optionRow("DIFICULDADE", "<  " + difficulty.getLabel() + "  >", 443f);
+        optionRow("VOLUME GERAL", volume + "%", 381f);
+        optionRow("AUDIO", game.getSettings().isMuted() ? "DESATIVADO" : "ATIVO", 319f);
+        optionRow("EXIBICAO", game.getSettings().isFullscreen() ? "TELA CHEIA" : "JANELA", 257f);
+        set(fonts.micro, UiTheme.MUTED);
+        fonts.micro.draw(batch,
+            "ESQ/DIR  DIFICULDADE    CIMA/BAIXO  VOLUME    M  AUDIO    F  EXIBICAO",
+            0f, 188f, WIDTH, Align.center, false);
+        modalFooter("SALVAR E VOLTAR");
+        batch.end();
+    }
+
+    private void optionRow(String name, String value, float y) {
+        set(fonts.label, UiTheme.CYAN_SOFT);
+        fonts.label.draw(batch, name, 356f, y);
+        set(fonts.body, UiTheme.TEXT);
+        fonts.body.draw(batch, value, 620f, y, 300f, Align.right, false);
+    }
+
+    private void drawModalBase(String title, String subtitle) {
         enableBlend();
-
-        shapes.begin(
-            ShapeRenderer.ShapeType.Filled
-        );
-
-        shapes.setColor(
-            0f,
-            0f,
-            0f,
-            0.82f
-        );
-
-        shapes.rect(
-            0f,
-            0f,
-            WIDTH,
-            HEIGHT
-        );
-
-        shapes.setColor(
-            0.015f,
-            0.045f,
-            0.07f,
-            0.98f
-        );
-
-        shapes.rect(
-            330f,
-            150f,
-            620f,
-            420f
-        );
-
-        shapes.setColor(
-            0.05f,
-            0.86f,
-            1f,
-            1f
-        );
-
-        shapes.rect(
-            330f,
-            566f,
-            620f,
-            4f
-        );
-
+        shapes.begin(ShapeRenderer.ShapeType.Filled);
+        shapes.setColor(0.002f, 0.006f, 0.010f, 0.88f);
+        shapes.rect(0f, 0f, WIDTH, HEIGHT);
+        UiTheme.panel(shapes, 270f, 112f, 740f, 496f, UiTheme.CYAN);
+        shapes.setColor(UiTheme.BORDER);
+        shapes.rect(334f, 498f, 612f, 1f);
         shapes.end();
-
         disableBlend();
 
         batch.begin();
-
-        font.getData()
-            .setScale(
-                1.55f
-            );
-
-        font.setColor(
-            Color.WHITE
-        );
-
-        font.draw(
-            batch,
-            "PROTOCOLO EVA",
-            0f,
-            520f,
-            WIDTH,
-            Align.center,
-            false
-        );
-
-        font.getData()
-            .setScale(
-                0.92f
-            );
-
-        font.setColor(
-            Color.LIGHT_GRAY
-        );
-
-        font.draw(
-            batch,
-            "WASD / SETAS     Movimento",
-            410f,
-            450f
-        );
-
-        font.draw(
-            batch,
-            "E                Processar gelo na base",
-            410f,
-            410f
-        );
-
-        font.draw(
-            batch,
-            "ESC              Pausar",
-            410f,
-            370f
-        );
-
-        font.draw(
-            batch,
-            "R                Reiniciar apos falha",
-            410f,
-            330f
-        );
-
-        font.setColor(
-            0.05f,
-            0.86f,
-            1f,
-            1f
-        );
-
-        font.draw(
-            batch,
-            "OBJETIVO",
-            410f,
-            275f
-        );
-
-        font.setColor(
-            Color.WHITE
-        );
-
-        font.draw(
-            batch,
-            "Produza agua e H2 para ativar o portal.",
-            410f,
-            240f
-        );
-
-        font.setColor(
-            Color.LIGHT_GRAY
-        );
-
-        font.draw(
-            batch,
-            "ESC - VOLTAR",
-            0f,
-            180f,
-            WIDTH,
-            Align.center,
-            false
-        );
-
+        set(fonts.heading, UiTheme.TEXT);
+        fonts.heading.draw(batch, title, 0f, 565f, WIDTH, Align.center, false);
+        set(fonts.micro, UiTheme.CYAN_SOFT);
+        fonts.micro.draw(batch, subtitle, 0f, 528f, WIDTH, Align.center, false);
         batch.end();
+    }
+
+    private void modalFooter(String action) {
+        set(fonts.micro, UiTheme.MUTED);
+        fonts.micro.draw(batch, "[ ESC ]  " + action, 0f, 140f,
+            WIDTH, Align.center, false);
+    }
+
+    private void set(BitmapFont font, Color color) {
+        font.setColor(color);
     }
 
     private void enableBlend() {
-
-        Gdx.gl.glEnable(
-            GL20.GL_BLEND
-        );
-
-        Gdx.gl.glBlendFunc(
-            GL20.GL_SRC_ALPHA,
-            GL20.GL_ONE_MINUS_SRC_ALPHA
-        );
+        Gdx.gl.glEnable(GL20.GL_BLEND);
+        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
     }
 
     private void disableBlend() {
-
-        Gdx.gl.glDisable(
-            GL20.GL_BLEND
-        );
+        Gdx.gl.glDisable(GL20.GL_BLEND);
     }
 
     @Override
-    public void resize(
-        int width,
-        int height
-    ) {
-
-        viewport.update(
-            width,
-            height,
-            true
-        );
+    public void resize(int width, int height) {
+        viewport.update(width, height, true);
     }
 
     @Override
     public void dispose() {
-
-        if (shapes != null) {
-            shapes.dispose();
-            shapes = null;
-        }
-
-        if (font != null) {
-            font.dispose();
-            font = null;
-        }
+        if (shapes != null) shapes.dispose();
+        if (fonts != null) fonts.close();
     }
 }

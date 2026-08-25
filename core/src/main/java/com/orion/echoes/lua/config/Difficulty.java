@@ -45,6 +45,14 @@ public enum Difficulty {
         return scoreMultiplier;
     }
 
+    public float getEnemyDamageMultiplier() {
+        return switch (this) {
+            case EXPLORER -> 0.72f;
+            case STANDARD -> 1f;
+            case SURVIVOR -> 1.35f;
+        };
+    }
+
     public Difficulty next() {
         Difficulty[] values = values();
         return values[(ordinal() + 1) % values.length];

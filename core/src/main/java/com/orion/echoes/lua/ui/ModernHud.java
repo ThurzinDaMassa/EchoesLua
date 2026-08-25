@@ -6,6 +6,7 @@ import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.Align;
@@ -13,8 +14,12 @@ import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
 import com.orion.echoes.lua.entities.LunarBase;
+import com.orion.echoes.lua.assets.GameAssets;
+import com.orion.echoes.lua.enums.ItemType;
 import com.orion.echoes.lua.entities.Player;
 import com.orion.echoes.lua.entities.Portal;
+import com.orion.echoes.lua.entities.RepairStation;
+import com.orion.echoes.lua.progress.MissionState;
 import com.orion.echoes.lua.systems.IceProcessor;
 import com.orion.echoes.lua.systems.MissionSystem;
 import com.orion.echoes.lua.systems.PlayerStatus;
@@ -28,10 +33,12 @@ public class ModernHud {
     private final Viewport viewport;
     private final ShapeRenderer shapes;
     private final UiFonts fonts;
+    private final GameAssets assets;
 
     private float animationTime;
 
-    public ModernHud() {
+    public ModernHud(GameAssets assets) {
+        this.assets = assets;
         camera = new OrthographicCamera();
         viewport = new FitViewport(WIDTH, HEIGHT, camera);
         camera.position.set(WIDTH / 2f, HEIGHT / 2f, 0f);
@@ -50,14 +57,18 @@ public class ModernHud {
         Portal portal,
         float missionTime,
         boolean paused,
-        boolean missionFailed
+        boolean missionFailed,
+        RepairStation nearbyStation,
+        boolean portalNearby
     ) {
         animationTime += Gdx.graphics.getDeltaTime();
         boolean insideBase = base.isPlayerInside(player);
 
         enableBlend();
-        drawInterfaceShapes(status, insideBase, processor, mission, portal, paused, missionFailed);
-        drawInterfaceText(batch, status, player, insideBase, processor, mission, portal, missionTime);
+        drawInterfaceShapes(status, insideBase, processor, mission, portal, paused,
+            missionFailed, nearbyStation, portalNearby);
+        drawInterfaceText(batch, status, player, insideBase, processor, mission, portal,
+            missionTime, nearbyStation, portalNearby);
         disableBlend();
     }
 
@@ -68,50 +79,57 @@ public class ModernHud {
         MissionSystem mission,
         Portal portal,
         boolean paused,
-        boolean missionFailed
+        boolean missionFailed,
+        RepairStation nearbyStation,
+        boolean portalNearby
     ) {
         shapes.setProjectionMatrix(camera.combined);
         shapes.begin(ShapeRenderer.ShapeType.Filled);
 
-        UiTheme.panel(shapes, 24f, 576f, 342f, 120f,
+        UiTheme.panel(shapes, 24f, 610f, 300f, 86f,
             insideBase ? UiTheme.GREEN : UiTheme.CYAN);
-        UiTheme.panel(shapes, 390f, 625f, 500f, 71f, UiTheme.CYAN);
-        UiTheme.panel(shapes, 914f, 576f, 342f, 120f,
+        UiTheme.panel(shapes, 344f, 630f, 592f, 66f, UiTheme.CYAN);
+        UiTheme.panel(shapes, 956f, 630f, 300f, 66f,
             portal.isActive() ? UiTheme.PURPLE : UiTheme.CYAN_SOFT);
+        UiTheme.panel(shapes, 24f, 426f, 260f, 184f, UiTheme.PURPLE);
 
-        UiTheme.bar(shapes, 112f, 638f, 220f, 9f,
+        UiTheme.bar(shapes, 92f, 670f, 154f, 7f,
             status.getOxygen() / GameConstants.MAX_OXYGEN,
             oxygenColor(status.getOxygen()));
-        UiTheme.bar(shapes, 112f, 606f, 220f, 7f,
+        UiTheme.bar(shapes, 92f, 651f, 154f, 6f,
+            status.getHealth() / GameConstants.MAX_HEALTH,
+            status.getHealth() < 30f ? UiTheme.DANGER : UiTheme.GREEN);
+        UiTheme.bar(shapes, 92f, 632f, 154f, 6f,
             status.getEnergy() / GameConstants.MAX_ENERGY,
             UiTheme.GREEN);
 
-        drawResourceDivider(556f);
-        drawResourceDivider(722f);
-
-        float waterProgress = (float) status.getWater() / mission.getRequiredWater();
-        float fuelProgress = (float) status.getFuel() / mission.getRequiredFuel();
-        float missionProgress = (MathUtils.clamp(waterProgress, 0f, 1f)
-            + MathUtils.clamp(fuelProgress, 0f, 1f)) * 0.5f;
-        UiTheme.bar(shapes, 940f, 597f, 290f, 6f, missionProgress,
+        MissionState state = mission.getState();
+        float missionProgress = (MathUtils.clamp(state.getRepairCount() / 4f, 0f, 1f)
+            + (state.hasWeapon() ? 1f : 0f)
+            + MathUtils.clamp(state.getEnemiesDefeated(), 0, 1)) / 3f;
+        UiTheme.bar(shapes, 980f, 636f, 250f, 5f, missionProgress,
             portal.isActive() ? UiTheme.PURPLE : UiTheme.CYAN);
 
         shapes.setColor(0.004f, 0.012f, 0.018f, 0.82f);
-        shapes.rect(24f, 20f, 360f, 31f);
+        shapes.rect(24f, 20f, 300f, 32f);
         shapes.setColor(UiTheme.CYAN_SOFT);
-        shapes.rect(24f, 50f, 360f, 1f);
+        shapes.rect(24f, 51f, 300f, 1f);
 
-        if (insideBase) {
-            UiTheme.panel(shapes, 404f, 22f, 472f, 62f, UiTheme.GREEN);
-            shapes.setColor(UiTheme.GREEN);
-            shapes.rect(422f, 38f, 32f, 32f);
-        } else if (processor.getLastMessage() != null) {
+        if (nearbyStation != null) {
+            UiTheme.panel(shapes, 344f, 20f, 592f, 66f,
+                state.isRepaired(nearbyStation.getType()) ? UiTheme.GREEN : UiTheme.CYAN);
+        } else if (portalNearby) {
+            UiTheme.panel(shapes, 344f, 20f, 592f, 66f,
+                portal.isActive() ? UiTheme.PURPLE : UiTheme.WARNING);
+        } else if (insideBase) {
+            UiTheme.panel(shapes, 344f, 20f, 592f, 76f, UiTheme.GREEN);
+        } else if (mission.getState().getLastMessage() != null) {
             shapes.setColor(0.004f, 0.014f, 0.022f, 0.94f);
-            shapes.rect(390f, 20f, 500f, 44f);
+            shapes.rect(344f, 20f, 592f, 44f);
             shapes.setColor(UiTheme.CYAN_SOFT);
-            shapes.rect(390f, 20f, 3f, 44f);
+            shapes.rect(344f, 20f, 3f, 44f);
             shapes.setColor(UiTheme.BORDER);
-            shapes.rect(390f, 63f, 500f, 1f);
+            shapes.rect(344f, 63f, 592f, 1f);
         }
 
         if (status.getOxygen() < GameConstants.CRITICAL_OXYGEN_THRESHOLD && !missionFailed) {
@@ -151,77 +169,149 @@ public class ModernHud {
         IceProcessor processor,
         MissionSystem mission,
         Portal portal,
-        float missionTime
+        float missionTime,
+        RepairStation nearbyStation,
+        boolean portalNearby
     ) {
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
 
         label(fonts.label, UiTheme.CYAN_SOFT);
-        fonts.label.draw(batch, "EVA // 01", 44f, 678f);
+        fonts.label.draw(batch, "EVA-01", 44f, 682f);
 
         label(fonts.micro, UiTheme.MUTED);
-        fonts.micro.draw(batch, "OXIGENIO", 44f, 649f);
-        fonts.micro.draw(batch, "ENERGIA", 44f, 617f);
+        fonts.micro.draw(batch, "O2", 44f, 674f);
+        fonts.micro.draw(batch, "HP", 44f, 655f);
+        fonts.micro.draw(batch, "EN", 44f, 636f);
 
         label(fonts.label, UiTheme.TEXT);
-        fonts.label.draw(batch, Math.round(status.getOxygen()) + "%", 290f, 651f,
-            44f, Align.right, false);
-        fonts.label.draw(batch, Math.round(status.getEnergy()) + "%", 290f, 619f,
-            44f, Align.right, false);
+        fonts.label.draw(batch, Math.round(status.getOxygen()) + "%", 252f, 680f,
+            40f, Align.right, false);
+        fonts.label.draw(batch, Math.round(status.getHealth()) + "%", 252f, 661f,
+            40f, Align.right, false);
+        fonts.label.draw(batch, Math.round(status.getEnergy()) + "%", 252f, 642f,
+            40f, Align.right, false);
 
         label(fonts.micro, insideBase ? UiTheme.GREEN : UiTheme.MUTED);
-        String state = insideBase ? "AMBIENTE PRESSURIZADO"
+        String environmentState = insideBase ? "AMBIENTE PRESSURIZADO"
             : player.isSprinting() ? "PROPULSAO EVA ATIVA" : "SUPERFICIE LUNAR";
-        fonts.micro.draw(batch, state, 44f, 591f);
+        fonts.micro.draw(batch, environmentState, 44f, 618f);
 
-        drawResource(batch, "GELO", status.getIce(), 414f);
-        drawResource(batch, "AGUA", status.getWater(), 580f);
-        drawResource(batch, "H2", status.getFuel(), 746f);
+        MissionState state = mission.getState();
 
         label(fonts.label, UiTheme.CYAN_SOFT);
-        fonts.label.draw(batch, "OBJETIVO DE EXTRACAO", 938f, 678f);
+        fonts.label.draw(batch, "ETAPA " + state.getLunarStage() + "/4 // "
+            + state.getStageTitle(), 364f, 680f);
         label(fonts.micro, UiTheme.MUTED);
-        fonts.micro.draw(batch, formatTime(missionTime), 1164f, 678f, 66f, Align.right, false);
+        fonts.micro.draw(batch, formatTime(missionTime), 790f, 680f, 62f, Align.right, false);
 
-        label(fonts.body, UiTheme.TEXT);
-        fonts.body.draw(batch,
-            "AGUA " + status.getWater() + "/" + mission.getRequiredWater()
-                + "   H2 " + status.getFuel() + "/" + mission.getRequiredFuel(),
-            938f, 646f);
+        label(fonts.label, UiTheme.TEXT);
+        fonts.label.draw(batch, state.getStageInstruction(status.getOxygen()),
+            364f, 650f, 490f, Align.left, false);
+        Texture requestedIcon = getRequestedIcon(state);
+        batch.draw(requestedIcon, 876f, 642f, 42f, 42f);
 
-        label(fonts.micro, portal.isActive() ? UiTheme.PURPLE : UiTheme.MUTED);
-        fonts.micro.draw(batch,
-            portal.isActive() ? "PORTAL ONLINE // DIRIJA-SE A EXTRACAO" : "PORTAL BLOQUEADO",
-            938f, 618f);
+        label(fonts.label, portal.isActive() ? UiTheme.PURPLE : UiTheme.CYAN_SOFT);
+        fonts.label.draw(batch, "PROGRESSO LUA", 976f, 680f);
+        label(fonts.micro, UiTheme.TEXT);
+        fonts.micro.draw(batch, "R " + state.getRepairCount() + "/4   ARMA "
+            + (state.hasWeapon() ? "ON" : state.getWeaponPartCount() + "/3")
+            + "   H " + Math.min(state.getEnemiesDefeated(), 1) + "/1", 976f, 655f);
+
+        drawMissionDetails(batch, state);
 
         label(fonts.micro, UiTheme.MUTED);
-        fonts.micro.draw(batch, "WASD  MOVER", 42f, 41f);
-        fonts.micro.draw(batch, "SHIFT  CORRER", 142f, 41f);
-        fonts.micro.draw(batch, "ESC  PAUSA", 276f, 41f);
+        fonts.micro.draw(batch, "WASD  SHIFT  MOUSE+CLIQUE  ESC", 42f, 41f);
 
-        if (insideBase) {
-            label(fonts.label, UiTheme.PANEL_SOLID);
-            fonts.label.draw(batch, "E", 422f, 61f, 32f, Align.center, false);
+        if (nearbyStation != null) {
+            boolean repaired = state.isRepaired(nearbyStation.getType());
+            label(fonts.label, repaired ? UiTheme.GREEN : UiTheme.CYAN);
+            fonts.label.draw(batch,
+                repaired ? nearbyStation.getType().getLabel() + " // ONLINE"
+                    : "[ E ] REPARAR " + nearbyStation.getType().getLabel(),
+                366f, 65f, 548f, Align.center, false);
+            label(fonts.micro, repaired ? UiTheme.GREEN : UiTheme.MUTED);
+            fonts.micro.draw(batch, repaired ? "SISTEMA OPERACIONAL"
+                : "REQUER PECA CORRESPONDENTE", 366f, 42f, 548f, Align.center, false);
+        } else if (portalNearby) {
+            label(fonts.label, portal.isActive() ? UiTheme.PURPLE : UiTheme.WARNING);
+            fonts.label.draw(batch, portal.isActive() ? "PORTAL ONLINE // ENTRE PARA VIAJAR"
+                : "PORTAL BLOQUEADO", 366f, 65f, 548f, Align.center, false);
+            label(fonts.micro, UiTheme.MUTED);
+            fonts.micro.draw(batch, portal.isActive() ? "DESTINO: BASE ARES // MARTE"
+                : state.getCurrentObjective(status.getOxygen()), 366f, 42f,
+                548f, Align.center, false);
+        } else if (insideBase) {
             label(fonts.label, UiTheme.TEXT);
             fonts.label.draw(batch,
-                status.getIce() > 0 ? "PROCESSAR GELO" : "SEM GELO NO INVENTARIO",
-                474f, 62f);
+                status.getIce() > 0 ? "[ E ] PROCESSAR GELO" : "BASE // SUPORTE DE VIDA ONLINE",
+                366f, 76f, 548f, Align.center, false);
             label(fonts.micro, UiTheme.MUTED);
-            fonts.micro.draw(batch, "CONVERSAO: GELO > AGUA + H2 + O2", 474f, 42f);
-        } else if (processor.getLastMessage() != null) {
+            fonts.micro.draw(batch, state.canCraftWeapon()
+                ? "[ C ] FABRICAR ARMA // COMPONENTES COMPLETOS"
+                : state.hasWeapon() ? "ARMA EVA ONLINE // MOUSE PARA MIRAR E DISPARAR"
+                : "[ C ] CRAFT BLOQUEADO // PARTES " + state.getWeaponPartCount() + "/3",
+                366f, 51f, 548f, Align.center, false);
+            fonts.micro.draw(batch, "GELO > AGUA + H2 + O2", 366f, 34f, 548f, Align.center, false);
+        } else if (state.getLastMessage() != null) {
             label(fonts.micro, UiTheme.CYAN_SOFT);
-            fonts.micro.draw(batch, processor.getLastMessage(), 420f, 48f,
-                440f, Align.center, false);
+            fonts.micro.draw(batch, state.getLastMessage(), 366f, 48f,
+                548f, Align.center, false);
         }
 
         batch.end();
     }
 
-    private void drawResource(SpriteBatch batch, String name, int value, float x) {
+    private Texture getRequestedIcon(MissionState state) {
+        ItemType requested = state.getRequestedItem();
+        if (requested == null) {
+            if (!state.hasWeapon()) return assets.getEvaWeapon();
+            if (state.getEnemiesDefeated() < 1) return assets.getEnemySentinel();
+            return assets.getPortal();
+        }
+        return switch (requested) {
+            case ANTENNA_PART -> assets.getAntennaPart();
+            case ENERGY_PART -> assets.getEnergyPart();
+            case EXTRACTION_PART -> assets.getExtractionPart();
+            case GREENHOUSE_PART -> assets.getGreenhousePart();
+            case WEAPON_PART_A -> assets.getWeaponPartA();
+            case WEAPON_PART_B -> assets.getWeaponPartB();
+            case WEAPON_PART_C -> assets.getWeaponPartC();
+            case MEDKIT -> assets.getMedkit();
+            case OXYGEN -> assets.getOxygen();
+            case FOOD -> assets.getFood();
+            case ICE_ROCK -> assets.getIceRock();
+        };
+    }
+
+    private void drawMissionDetails(SpriteBatch batch, MissionState state) {
+        label(fonts.label, UiTheme.PURPLE);
+        fonts.label.draw(batch, "ROTA DA MISSAO", 44f, 584f);
+
+        label(fonts.micro, state.getRepairCount() >= 4 ? UiTheme.GREEN : UiTheme.TEXT);
+        fonts.micro.draw(batch, "01  SISTEMAS       " + state.getRepairCount() + "/4", 44f, 550f);
+
+        label(fonts.micro, state.hasWeapon() ? UiTheme.GREEN : UiTheme.TEXT);
+        String weaponState = state.hasWeapon() ? "ONLINE"
+            : "A" + state.getCount(com.orion.echoes.lua.enums.ItemType.WEAPON_PART_A)
+                + " B" + state.getCount(com.orion.echoes.lua.enums.ItemType.WEAPON_PART_B)
+                + " C" + state.getCount(com.orion.echoes.lua.enums.ItemType.WEAPON_PART_C);
+        fonts.micro.draw(batch, "02  ARMA EVA       " + weaponState, 44f, 520f);
+
+        label(fonts.micro, state.getEnemiesDefeated() >= 1 ? UiTheme.GREEN : UiTheme.TEXT);
+        fonts.micro.draw(batch, "03  AMEACA         "
+            + Math.min(state.getEnemiesDefeated(), 1) + "/1", 44f, 490f);
+
+        label(fonts.micro, state.getLunarStage() >= 4 ? UiTheme.PURPLE : UiTheme.MUTED);
+        fonts.micro.draw(batch, "04  PORTAL         "
+            + (state.getLunarStage() >= 4 ? "LIBERADO" : "BLOQUEADO"), 44f, 460f);
+    }
+
+    private void drawResource(SpriteBatch batch, String name, String value, float x) {
         label(fonts.micro, UiTheme.MUTED);
         fonts.micro.draw(batch, name, x, 680f);
         label(fonts.heading, UiTheme.TEXT);
-        fonts.heading.draw(batch, String.valueOf(value), x, 654f);
+        fonts.heading.draw(batch, value, x, 654f);
     }
 
     private void label(BitmapFont font, Color color) {

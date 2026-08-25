@@ -16,6 +16,7 @@ public class GameSettings {
     private float soundVolume;
     private boolean muted;
     private boolean fullscreen;
+    private AstronautType astronautType;
 
     public GameSettings() {
         preferences = Gdx.app.getPreferences(PREFERENCES_NAME);
@@ -25,6 +26,11 @@ public class GameSettings {
         soundVolume = preferences.getFloat("soundVolume", 0.72f);
         muted = preferences.getBoolean("muted", false);
         fullscreen = preferences.getBoolean("fullscreen", false);
+        try {
+            astronautType = AstronautType.valueOf(preferences.getString("astronaut", "TRIPLE_T"));
+        } catch (IllegalArgumentException exception) {
+            astronautType = AstronautType.TRIPLE_T;
+        }
     }
 
     private Difficulty readDifficulty(String value) {
@@ -64,8 +70,18 @@ public class GameSettings {
         return musicVolume;
     }
 
+    public void adjustMusicVolume(float amount) {
+        musicVolume = MathUtils.clamp(musicVolume + amount, 0f, 1f);
+        save();
+    }
+
     public float getSoundVolume() {
         return soundVolume;
+    }
+
+    public void adjustSoundVolume(float amount) {
+        soundVolume = MathUtils.clamp(soundVolume + amount, 0f, 1f);
+        save();
     }
 
     public boolean isMuted() {
@@ -74,6 +90,13 @@ public class GameSettings {
 
     public boolean isFullscreen() {
         return fullscreen;
+    }
+
+    public AstronautType getAstronautType() { return astronautType; }
+
+    public void setAstronautType(AstronautType astronautType) {
+        this.astronautType = astronautType == null ? AstronautType.TRIPLE_T : astronautType;
+        save();
     }
 
     public void toggleFullscreen() {
@@ -103,6 +126,7 @@ public class GameSettings {
             .putFloat("soundVolume", soundVolume)
             .putBoolean("muted", muted)
             .putBoolean("fullscreen", fullscreen)
+            .putString("astronaut", astronautType.name())
             .flush();
     }
 }

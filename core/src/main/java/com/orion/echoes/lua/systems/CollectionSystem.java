@@ -7,6 +7,7 @@ import com.orion.echoes.lua.effects.ParticleManager;
 import com.orion.echoes.lua.entities.CollectibleItem;
 import com.orion.echoes.lua.entities.Player;
 import com.orion.echoes.lua.enums.ItemType;
+import com.orion.echoes.lua.progress.MissionState;
 import com.orion.echoes.lua.utils.GameConstants;
 
 public class CollectionSystem {
@@ -16,7 +17,8 @@ public class CollectionSystem {
         PlayerStatus status,
         Array<CollectibleItem> items,
         ParticleManager particleManager,
-        AudioManager audio
+        AudioManager audio,
+        MissionState missionState
     ) {
 
         for (
@@ -43,7 +45,8 @@ public class CollectionSystem {
                 item,
                 status,
                 particleManager,
-                audio
+                audio,
+                missionState
             );
         }
     }
@@ -52,7 +55,8 @@ public class CollectionSystem {
         CollectibleItem item,
         PlayerStatus status,
         ParticleManager particleManager,
-        AudioManager audio
+        AudioManager audio,
+        MissionState missionState
     ) {
 
         ItemType type =
@@ -84,6 +88,14 @@ public class CollectionSystem {
                     1
                 );
 
+                break;
+
+            case MEDKIT:
+                status.addHealth(GameConstants.MEDKIT_HEAL_AMOUNT);
+                break;
+
+            default:
+                missionState.collect(type);
                 break;
         }
 

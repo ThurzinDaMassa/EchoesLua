@@ -292,6 +292,51 @@ public class ParticleManager {
         }
     }
 
+    public void emitMuzzleBurst(float x, float y, float directionX, float directionY) {
+        for (int i = 0; i < 12; i++) {
+            float spread = MathUtils.random(-0.24f, 0.24f);
+            float speed = MathUtils.random(90f, 230f);
+            particles.add(new Particle(
+                x, y,
+                (directionX - directionY * spread) * speed,
+                (directionY + directionX * spread) * speed,
+                MathUtils.random(0.12f, 0.24f),
+                MathUtils.random(3f, 6f), 0.7f,
+                i % 3 == 0 ? new Color(1f, 0.24f, 0.78f, 1f)
+                    : new Color(0.18f, 0.94f, 1f, 1f)
+            ));
+        }
+    }
+
+    public void emitProjectileTrail(float x, float y, float directionX, float directionY) {
+        particles.add(new Particle(
+            x - directionX * 14f + MathUtils.random(-2f, 2f),
+            y - directionY * 14f + MathUtils.random(-2f, 2f),
+            -directionX * MathUtils.random(18f, 38f),
+            -directionY * MathUtils.random(18f, 38f),
+            0.18f, 3f, 0.3f,
+            MathUtils.randomBoolean(0.22f)
+                ? new Color(1f, 0.22f, 0.72f, 0.9f)
+                : new Color(0.15f, 0.88f, 1f, 0.9f)
+        ));
+    }
+
+    public void emitProjectileImpact(float x, float y) {
+        for (int i = 0; i < 24; i++) {
+            float angle = MathUtils.random(0f, 360f);
+            float speed = MathUtils.random(55f, 190f);
+            particles.add(new Particle(
+                x, y,
+                MathUtils.cosDeg(angle) * speed,
+                MathUtils.sinDeg(angle) * speed,
+                MathUtils.random(0.25f, 0.48f),
+                MathUtils.random(3f, 7f), 1.1f,
+                i % 4 == 0 ? new Color(1f, 0.28f, 0.74f, 1f)
+                    : new Color(0.12f, 0.96f, 1f, 1f)
+            ));
+        }
+    }
+
     private Color getPickupColor(ItemType type) {
 
         switch (type) {
@@ -301,6 +346,18 @@ public class ParticleManager {
                 return new Color(1f, 0.62f, 0.12f, 1f);
             case ICE_ROCK:
                 return new Color(0.78f, 0.92f, 1f, 1f);
+            case ANTENNA_PART:
+                return new Color(0.18f, 0.92f, 1f, 1f);
+            case ENERGY_PART:
+                return new Color(1f, 0.78f, 0.18f, 1f);
+            case EXTRACTION_PART:
+                return new Color(0.24f, 0.68f, 1f, 1f);
+            case GREENHOUSE_PART:
+                return new Color(0.26f, 1f, 0.54f, 1f);
+            case WEAPON_PART_A:
+            case WEAPON_PART_B:
+            case WEAPON_PART_C:
+                return new Color(0.78f, 0.34f, 1f, 1f);
             default:
                 return Color.WHITE;
         }

@@ -7,6 +7,7 @@ public class PlayerStatus {
 
     private float oxygen;
     private float energy;
+    private float health;
 
     private int ice;
     private int water;
@@ -14,8 +15,9 @@ public class PlayerStatus {
 
     public PlayerStatus() {
 
-        oxygen = 65f;
-        energy = 60f;
+        oxygen = 78f;
+        energy = 72f;
+        health = GameConstants.MAX_HEALTH;
 
         ice = 0;
         water = 0;
@@ -110,6 +112,22 @@ public class PlayerStatus {
         );
     }
 
+    public float getHealth() { return health; }
+
+    public void setHealth(float health) {
+        this.health = MathUtils.clamp(health, 0f, GameConstants.MAX_HEALTH);
+    }
+
+    public void addHealth(float amount) {
+        if (amount > 0f) setHealth(health + amount);
+    }
+
+    public void removeHealth(float amount) {
+        if (amount > 0f) setHealth(health - amount);
+    }
+
+    public boolean isAlive() { return health > 0f; }
+
     // =========================================================
     // GELO
     // =========================================================
@@ -168,5 +186,18 @@ public class PlayerStatus {
         if (amount > 0) {
             fuel += amount;
         }
+    }
+
+    public void restore(float oxygen, float energy, int ice, int water, int fuel) {
+        restore(oxygen, energy, GameConstants.MAX_HEALTH, ice, water, fuel);
+    }
+
+    public void restore(float oxygen, float energy, float health, int ice, int water, int fuel) {
+        setOxygen(oxygen);
+        setEnergy(energy);
+        setHealth(health);
+        this.ice = Math.max(0, ice);
+        this.water = Math.max(0, water);
+        this.fuel = Math.max(0, fuel);
     }
 }

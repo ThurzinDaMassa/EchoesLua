@@ -5,6 +5,7 @@ import com.orion.echoes.lua.effects.ParticleManager;
 import com.orion.echoes.lua.entities.Player;
 import com.orion.echoes.lua.entities.Portal;
 import com.orion.echoes.lua.config.Difficulty;
+import com.orion.echoes.lua.progress.MissionState;
 
 public class MissionSystem {
 
@@ -18,18 +19,27 @@ public class MissionSystem {
 
     private boolean activationEffectPlayed;
 
+    private final MissionState state;
+
     public MissionSystem() {
 
-        this(Difficulty.STANDARD);
+        this(Difficulty.STANDARD, new MissionState());
     }
 
     public MissionSystem(Difficulty difficulty) {
+
+        this(difficulty, new MissionState());
+    }
+
+    public MissionSystem(Difficulty difficulty, MissionState state) {
 
         objectivesComplete = false;
 
         missionComplete = false;
 
         activationEffectPlayed = false;
+
+        this.state = state;
 
         requiredWater = difficulty.getRequiredWater();
 
@@ -55,19 +65,7 @@ public class MissionSystem {
             !objectivesComplete
         ) {
 
-            boolean waterComplete =
-                status.getWater()
-                    >= requiredWater;
-
-            boolean fuelComplete =
-                status.getFuel()
-                    >= requiredFuel;
-
-            if (
-                waterComplete
-                    &&
-                    fuelComplete
-            ) {
+            if (state.isPortalReady(status.getOxygen())) {
 
                 objectivesComplete = true;
 
@@ -116,5 +114,9 @@ public class MissionSystem {
 
     public boolean isMissionComplete() {
         return missionComplete;
+    }
+
+    public MissionState getState() {
+        return state;
     }
 }

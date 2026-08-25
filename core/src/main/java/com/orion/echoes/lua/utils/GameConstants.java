@@ -80,6 +80,8 @@ public final class GameConstants {
     // =========================================================
 
     public static final float MAX_ENERGY = 100f;
+    public static final float MAX_HEALTH = 100f;
+    public static final float MEDKIT_HEAL_AMOUNT = 45f;
 
     // =========================================================
     // ITENS

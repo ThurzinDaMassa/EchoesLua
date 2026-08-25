@@ -4,11 +4,14 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 
 import com.orion.echoes.lua.assets.GameAssets;
+import com.orion.echoes.lua.config.AstronautType;
 import com.orion.echoes.lua.systems.PlayerStatus;
 import com.orion.echoes.lua.utils.GameConstants;
 
@@ -36,6 +39,11 @@ public class Player {
 
     private final Sprite sprite;
 
+    private final Sprite weaponSprite;
+    private final TextureRegion[] actionFrames;
+    private int actionPose = -1;
+    private float actionTimer;
+
     // =========================================================
     // ESTADO
     // =========================================================
@@ -47,6 +55,7 @@ public class Player {
     private boolean sprinting;
 
     private boolean wantsToSprint;
+    private boolean sprintExhausted;
 
     private float movementTime;
 
@@ -59,6 +68,10 @@ public class Player {
         float startY,
         GameAssets assets
     ) {
+        this(startX, startY, assets, AstronautType.TRIPLE_T);
+    }
+
+    public Player(float startX, float startY, GameAssets assets, AstronautType astronautType) {
 
         position =
             new Vector2(
@@ -78,10 +91,14 @@ public class Player {
         bounds =
             new Rectangle();
 
-        sprite =
-            new Sprite(
-                assets.getAstronaut()
-            );
+        Texture actionTexture = assets.getAstronaut(astronautType);
+        int frameWidth = actionTexture.getWidth() / 5;
+        actionFrames = new TextureRegion[5];
+        for (int i = 0; i < actionFrames.length; i++) {
+            actionFrames[i] = new TextureRegion(actionTexture, i * frameWidth, 0,
+                frameWidth, actionTexture.getHeight());
+        }
+        sprite = new Sprite(actionFrames[0]);
 
         sprite.setSize(
             GameConstants.PLAYER_WIDTH,
@@ -95,6 +112,10 @@ public class Player {
             startY
         );
 
+        weaponSprite = new Sprite(assets.getEvaWeapon());
+        weaponSprite.setSize(94f, 47f);
+        weaponSprite.setOrigin(18f, 23.5f);
+
         moving = false;
 
         // A arte original do astronauta aponta para a esquerda.
@@ -103,6 +124,7 @@ public class Player {
         sprinting = false;
 
         movementTime = 0f;
+        sprintExhausted = false;
 
         updateBounds();
     }
@@ -122,6 +144,9 @@ public class Player {
          * Isso e usado pelo sistema de colisao
          * com obstaculos.
          */
+        actionTimer = Math.max(0f, actionTimer - delta);
+        if (actionTimer <= 0f) actionPose = -1;
+
         previousPosition.set(
             position
         );
@@ -217,9 +242,11 @@ public class Player {
         moving =
             !direction.isZero();
 
-        sprinting = moving
-            && wantsToSprint
-            && status.getEnergy() > 0f;
+        if (!wantsToSprint) sprintExhausted = false;
+        if (sprintExhausted && status.getEnergy() >= 25f) sprintExhausted = false;
+
+        sprinting = moving && wantsToSprint && !sprintExhausted
+            && status.getEnergy() > 1f;
 
         if (!moving) {
             status.addEnergy(GameConstants.ENERGY_RECOVERY_RATE * delta);
@@ -238,6 +265,7 @@ public class Player {
         if (sprinting) {
             speed *= GameConstants.PLAYER_SPRINT_MULTIPLIER;
             status.removeEnergy(GameConstants.SPRINT_ENERGY_COST * delta);
+            if (status.getEnergy() <= 1f) sprintExhausted = true;
         } else {
             status.addEnergy(GameConstants.ENERGY_RECOVERY_RATE * 0.55f * delta);
         }
@@ -296,6 +324,9 @@ public class Player {
     // =========================================================
 
     private void updateSprite() {
+
+        int pose = actionPose >= 0 ? actionPose : !moving ? 0 : sprinting ? 2 : 1;
+        sprite.setRegion(actionFrames[pose]);
 
         float bob = moving
             ? MathUtils.sin(movementTime) * (sprinting ? 3f : 1.7f)
@@ -441,6 +472,37 @@ public class Player {
             batch
         );
     }
+
+    public void renderWeapon(SpriteBatch batch, float aimX, float aimY) {
+        float originX = getCenterX();
+        float originY = getCenterY() - 4f;
+        float angle = MathUtils.atan2(aimY - originY, aimX - originX) * MathUtils.radiansToDegrees;
+        boolean aimLeft = aimX < originX;
+
+        weaponSprite.setPosition(originX - 18f, originY - 23.5f);
+        weaponSprite.setRotation(angle);
+        weaponSprite.setFlip(false, aimLeft);
+        weaponSprite.draw(batch);
+    }
+
+    public void setFacingTowards(float worldX) {
+        if (Math.abs(worldX - getCenterX()) > 2f) {
+            facingLeft = worldX < getCenterX();
+            sprite.setFlip(!facingLeft, false);
+        }
+    }
+
+    public void triggerFireAnimation() {
+        actionPose = 3;
+        actionTimer = 0.12f;
+    }
+
+    public void triggerCraftAnimation() {
+        actionPose = 4;
+        actionTimer = 0.55f;
+    }
+
+    public boolean isFiringAnimation() { return actionPose == 3 && actionTimer > 0f; }
 
     // =========================================================
     // GETTERS DE POSICAO

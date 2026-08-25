@@ -135,6 +135,15 @@ public class Portal {
             );
     }
 
+    public boolean isPlayerNear(Player player) {
+        Rectangle interaction = new Rectangle(bounds);
+        interaction.x -= 70f;
+        interaction.y -= 70f;
+        interaction.width += 140f;
+        interaction.height += 140f;
+        return interaction.overlaps(player.getBounds());
+    }
+
     public void activate() {
 
         active = true;

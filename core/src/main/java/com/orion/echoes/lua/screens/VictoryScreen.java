@@ -176,12 +176,13 @@ public class VictoryScreen extends ScreenAdapter {
 
         set(fonts.micro, newRecord ? UiTheme.GREEN : UiTheme.CYAN);
         fonts.micro.draw(batch,
-            newRecord ? "NOVO RECORDE // EXTRAÇÃO CONFIRMADA" : "EXTRACAO CONFIRMADA // SINAL ESTAVEL",
+            newRecord ? "NOVO RECORDE // INTEGRACAO CONFIRMADA" : "INTEGRACAO CONFIRMADA // SINAL ESTAVEL",
             86f, 628f);
         set(fonts.heading, UiTheme.TEXT);
         fonts.heading.draw(batch, "MISSAO CONCLUIDA", 86f, 583f);
         set(fonts.body, UiTheme.MUTED);
-        fonts.body.draw(batch, "A tripulacao e os recursos foram recuperados.", 86f, 546f);
+        fonts.body.draw(batch, "Lua restaurada. Base Ares sincronizada. Rota interplanetaria estavel.",
+            86f, 546f, 570f, Align.left, true);
 
         set(fonts.micro, UiTheme.CYAN_SOFT);
         fonts.micro.draw(batch, "PONTUACAO DA MISSAO", 86f, 482f);
@@ -196,7 +197,7 @@ public class VictoryScreen extends ScreenAdapter {
         stat("O2 RESIDUAL", Math.round(oxygen) + "%", 484f);
 
         set(fonts.micro, UiTheme.MUTED);
-        fonts.micro.draw(batch, "CARGA PROCESSADA", 86f, 235f);
+        fonts.micro.draw(batch, "RECURSOS PRESERVADOS NA TRANSICAO", 86f, 235f);
         set(fonts.body, UiTheme.TEXT);
         fonts.body.draw(batch, "AGUA  " + water + "     H2  " + fuel, 86f, 202f);
 
@@ -210,7 +211,7 @@ public class VictoryScreen extends ScreenAdapter {
         fonts.label.draw(batch, "MENU PRINCIPAL", 462f, 141f);
 
         set(fonts.micro, UiTheme.CYAN_SOFT);
-        fonts.micro.draw(batch, "PORTAL DE RETORNO // ESTAVEL", 850f, 640f);
+        fonts.micro.draw(batch, "ROTA LUA > MARTE // ESTAVEL", 850f, 640f);
         set(fonts.micro, UiTheme.MUTED);
         fonts.micro.draw(batch, "ORION DEEP SPACE PROGRAM", 878f, 46f);
         batch.end();

@@ -37,6 +37,9 @@ public class SurvivalSystem {
             return;
         }
 
+        checkMissionFailure(status);
+        if (missionFailed) return;
+
         /*
          * Dentro da base, o jogador esta protegido.
          *
@@ -90,7 +93,7 @@ public class SurvivalSystem {
     ) {
 
         if (
-            status.getOxygen() <= 0f
+            status.getOxygen() <= 0f || !status.isAlive()
         ) {
 
             missionFailed = true;

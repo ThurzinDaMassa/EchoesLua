@@ -21,5 +21,7 @@ class DifficultyTest {
             > Difficulty.STANDARD.getOxygenConsumptionMultiplier());
         assertTrue(Difficulty.SURVIVOR.getScoreMultiplier()
             > Difficulty.STANDARD.getScoreMultiplier());
+        assertTrue(Difficulty.SURVIVOR.getEnemyDamageMultiplier()
+            > Difficulty.STANDARD.getEnemyDamageMultiplier());
     }
 }

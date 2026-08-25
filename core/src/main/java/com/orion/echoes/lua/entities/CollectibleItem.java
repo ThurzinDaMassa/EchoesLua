@@ -1,6 +1,7 @@
 package com.orion.echoes.lua.entities;
 
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.MathUtils;
@@ -8,7 +9,6 @@ import com.badlogic.gdx.math.Rectangle;
 
 import com.orion.echoes.lua.assets.GameAssets;
 import com.orion.echoes.lua.enums.ItemType;
-import com.orion.echoes.lua.utils.GameConstants;
 
 public class CollectibleItem {
 
@@ -71,6 +71,8 @@ public class CollectibleItem {
             y
         );
 
+        sprite.setColor(getColorForType(type));
+
         bounds =
             new Rectangle(
                 x,
@@ -95,6 +97,23 @@ public class CollectibleItem {
 
             case ICE_ROCK:
                 return assets.getIceRock();
+            case MEDKIT:
+                return assets.getMedkit();
+
+            case ANTENNA_PART:
+                return assets.getAntennaPart();
+            case ENERGY_PART:
+                return assets.getEnergyPart();
+            case EXTRACTION_PART:
+                return assets.getExtractionPart();
+            case GREENHOUSE_PART:
+                return assets.getGreenhousePart();
+            case WEAPON_PART_A:
+                return assets.getWeaponPartA();
+            case WEAPON_PART_B:
+                return assets.getWeaponPartB();
+            case WEAPON_PART_C:
+                return assets.getWeaponPartC();
 
             default:
                 throw new IllegalArgumentException(
@@ -118,10 +137,16 @@ public class CollectibleItem {
 
             case ICE_ROCK:
                 return 62f;
+            case MEDKIT:
+                return 58f;
 
             default:
-                return GameConstants.ITEM_SIZE;
+                return 48f;
         }
+    }
+
+    private Color getColorForType(ItemType type) {
+        return Color.WHITE;
     }
 
     public void update(
@@ -165,10 +190,6 @@ public class CollectibleItem {
         /*
          * Movimento suave.
          */
-        sprite.rotate(
-            12f * delta
-        );
-
         bounds.setPosition(
             baseX,
             currentY

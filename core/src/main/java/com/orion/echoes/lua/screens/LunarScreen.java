@@ -22,7 +22,12 @@ import com.orion.echoes.lua.entities.LunarBase;
 import com.orion.echoes.lua.entities.Obstacle;
 import com.orion.echoes.lua.entities.Player;
 import com.orion.echoes.lua.entities.Portal;
+import com.orion.echoes.lua.entities.RepairStation;
+import com.orion.echoes.lua.entities.Enemy;
 import com.orion.echoes.lua.enums.ItemType;
+import com.orion.echoes.lua.enums.RepairType;
+import com.orion.echoes.lua.progress.MissionState;
+import com.orion.echoes.lua.systems.CombatSystem;
 import com.orion.echoes.lua.systems.CollectionSystem;
 import com.orion.echoes.lua.systems.IceProcessor;
 import com.orion.echoes.lua.systems.MissionSystem;
@@ -30,7 +35,6 @@ import com.orion.echoes.lua.systems.ObstacleSystem;
 import com.orion.echoes.lua.systems.PlayerStatus;
 import com.orion.echoes.lua.systems.SurvivalSystem;
 import com.orion.echoes.lua.ui.ModernHud;
-import com.orion.echoes.lua.progress.MissionScore;
 import com.orion.echoes.lua.utils.GameConstants;
 import com.orion.echoes.lua.utils.MoonSurfaceTextureFactory;
 
@@ -60,6 +64,10 @@ public class LunarScreen extends ScreenAdapter {
 
     private Array<Obstacle> obstacles;
 
+    private Array<RepairStation> repairStations;
+
+    private Array<Enemy> enemies;
+
     private PlayerStatus playerStatus;
 
     private CollectionSystem collectionSystem;
@@ -74,6 +82,14 @@ public class LunarScreen extends ScreenAdapter {
 
     private MissionSystem missionSystem;
 
+    private MissionState missionState;
+
+    private CombatSystem combatSystem;
+
+    private final Vector2 aimWorld = new Vector2();
+
+    private RepairStation nearbyStation;
+
     private ModernHud hud;
 
     private boolean changingScreen;
@@ -84,8 +100,26 @@ public class LunarScreen extends ScreenAdapter {
 
     private float missionTime;
 
+    private float autosaveTimer;
+
+    private MissionState resumedMission;
+
+    private PlayerStatus resumedStatus;
+
+    private float resumedTime;
+
     public LunarScreen(
         LunarEchoesGame game
+    ) {
+
+        this(game, null, null, 0f);
+    }
+
+    public LunarScreen(
+        LunarEchoesGame game,
+        MissionState resumedMission,
+        PlayerStatus resumedStatus,
+        float resumedTime
     ) {
 
         this.game = game;
@@ -95,6 +129,10 @@ public class LunarScreen extends ScreenAdapter {
 
         this.audio =
             game.getAudio();
+
+        this.resumedMission = resumedMission;
+        this.resumedStatus = resumedStatus;
+        this.resumedTime = resumedTime;
     }
 
     @Override
@@ -106,7 +144,8 @@ public class LunarScreen extends ScreenAdapter {
 
         defeatSoundPlayed = false;
 
-        missionTime = 0f;
+        missionTime = resumedTime;
+        autosaveTimer = 0f;
 
         createCamera();
 
@@ -156,11 +195,15 @@ public class LunarScreen extends ScreenAdapter {
             new Player(
                 GameConstants.PLAYER_START_X,
                 GameConstants.PLAYER_START_Y,
-                game.getAssets()
+                game.getAssets(),
+                game.getSettings().getAstronautType()
             );
 
-        playerStatus =
-            new PlayerStatus();
+        boolean restoring = resumedMission != null && resumedStatus != null;
+
+        playerStatus = restoring ? resumedStatus : new PlayerStatus();
+
+        missionState = restoring ? resumedMission : new MissionState();
 
         lunarBase =
             new LunarBase(
@@ -172,6 +215,21 @@ public class LunarScreen extends ScreenAdapter {
         createItems();
 
         createObstacles();
+
+        createRepairStations();
+
+        createEnemies();
+
+        if (restoring) {
+            game.getProgress().restoreWorld(items, enemies);
+            player.setPosition(
+                game.getProgress().getSavedPlayerX(GameConstants.PLAYER_START_X),
+                game.getProgress().getSavedPlayerY(GameConstants.PLAYER_START_Y)
+            );
+            resumedMission = null;
+            resumedStatus = null;
+            resumedTime = 0f;
+        }
 
         portal =
             new Portal(
@@ -223,6 +281,9 @@ public class LunarScreen extends ScreenAdapter {
                 game.getAssets()
             )
         );
+
+        items.add(new CollectibleItem(ItemType.MEDKIT, 980f, 1040f, game.getAssets()));
+        items.add(new CollectibleItem(ItemType.MEDKIT, 2480f, 560f, game.getAssets()));
 
         items.add(
             new CollectibleItem(
@@ -277,6 +338,34 @@ public class LunarScreen extends ScreenAdapter {
                 game.getAssets()
             )
         );
+
+        addMissionItem(ItemType.ANTENNA_PART, 860f, 1360f);
+        addMissionItem(ItemType.ENERGY_PART, 1510f, 350f);
+        addMissionItem(ItemType.EXTRACTION_PART, 2710f, 1480f);
+        addMissionItem(ItemType.GREENHOUSE_PART, 2920f, 520f);
+        addMissionItem(ItemType.WEAPON_PART_A, 1220f, 1550f);
+        addMissionItem(ItemType.WEAPON_PART_B, 2150f, 420f);
+        addMissionItem(ItemType.WEAPON_PART_C, 2860f, 1120f);
+    }
+
+    private void addMissionItem(ItemType type, float x, float y) {
+        items.add(new CollectibleItem(type, x, y, game.getAssets()));
+    }
+
+    private void createRepairStations() {
+        repairStations = new Array<>();
+        repairStations.add(new RepairStation(RepairType.COMMUNICATION, 350f, 845f, game.getAssets()));
+        repairStations.add(new RepairStation(RepairType.ENERGY, 780f, 835f, game.getAssets()));
+        repairStations.add(new RepairStation(RepairType.EXTRACTION, 350f, 365f, game.getAssets()));
+        repairStations.add(new RepairStation(RepairType.GREENHOUSE, 790f, 365f, game.getAssets()));
+    }
+
+    private void createEnemies() {
+        enemies = new Array<>();
+        enemies.add(new Enemy(1320f, 720f, game.getAssets()));
+        enemies.add(new Enemy(2060f, 1180f, game.getAssets()));
+        enemies.add(new Enemy(2670f, 760f, game.getAssets()));
+        enemies.add(new Enemy(1750f, 1510f, game.getAssets()));
     }
 
     private void createObstacles() {
@@ -412,13 +501,15 @@ public class LunarScreen extends ScreenAdapter {
             new ObstacleSystem();
 
         missionSystem =
-            new MissionSystem(game.getSettings().getDifficulty());
+            new MissionSystem(game.getSettings().getDifficulty(), missionState);
+
+        combatSystem = new CombatSystem(game.getAssets(), game.getSettings().getDifficulty());
     }
 
     private void createHud() {
 
         hud =
-            new ModernHud();
+            new ModernHud(game.getAssets());
     }
 
     @Override
@@ -616,8 +707,11 @@ public class LunarScreen extends ScreenAdapter {
             playerStatus,
             items,
             particleManager,
-            audio
+            audio,
+            missionState
         );
+
+        updateMissionInteractions(delta, insideBase);
 
         iceProcessor.update(
             delta,
@@ -633,6 +727,24 @@ public class LunarScreen extends ScreenAdapter {
             player,
             lunarBase,
             playerStatus
+        );
+
+        updateAimPosition();
+        boolean firing = Gdx.input.isButtonPressed(Input.Buttons.LEFT)
+            || Gdx.input.isKeyPressed(Input.Keys.SPACE);
+        if (missionState.hasWeapon()) player.setFacingTowards(aimWorld.x);
+
+        combatSystem.update(
+            delta,
+            player,
+            playerStatus,
+            missionState,
+            enemies,
+            particleManager,
+            audio,
+            aimWorld.x,
+            aimWorld.y,
+            firing
         );
 
         if (
@@ -671,6 +783,13 @@ public class LunarScreen extends ScreenAdapter {
             getPortalPan()
         );
 
+        autosaveTimer += delta;
+        if (autosaveTimer >= 1f) {
+            autosaveTimer = 0f;
+            game.getProgress().saveMission(missionState, playerStatus, "LUA",
+                missionTime, countCollectedItems(), player, items, enemies);
+        }
+
         updateCamera(
             delta
         );
@@ -680,7 +799,34 @@ public class LunarScreen extends ScreenAdapter {
                 .isMissionComplete()
         ) {
 
-            goToVictoryScreen();
+            goToMarsScreen();
+        }
+    }
+
+    private void updateAimPosition() {
+        aimWorld.set(Gdx.input.getX(), Gdx.input.getY());
+        viewport.unproject(aimWorld);
+    }
+
+    private void updateMissionInteractions(float delta, boolean insideBase) {
+        nearbyStation = null;
+        for (RepairStation station : repairStations) {
+            station.update(delta);
+            if (station.isPlayerNear(player)) nearbyStation = station;
+        }
+
+        if (nearbyStation != null && Gdx.input.isKeyJustPressed(Input.Keys.E)) {
+            if (missionState.repair(nearbyStation.getType())) {
+                particleManager.emitProcessingBurst(nearbyStation.getCenterX(), nearbyStation.getCenterY());
+                audio.playRepair();
+            }
+        }
+
+        if (insideBase && Gdx.input.isKeyJustPressed(Input.Keys.C)
+            && missionState.craftWeapon()) {
+            player.triggerCraftAnimation();
+            particleManager.emitProcessingBurst(lunarBase.getCenterX(), lunarBase.getCenterY());
+            audio.playCraft();
         }
     }
 
@@ -702,7 +848,7 @@ public class LunarScreen extends ScreenAdapter {
         );
     }
 
-    private void goToVictoryScreen() {
+    private void goToMarsScreen() {
 
         if (changingScreen) {
             return;
@@ -712,30 +858,13 @@ public class LunarScreen extends ScreenAdapter {
 
         audio.stopGameplayAudio();
 
-        int collectedItems =
-            countCollectedItems();
-
-        int score = MissionScore.calculate(
-            missionTime,
-            collectedItems,
-            playerStatus.getOxygen(),
-            game.getSettings().getDifficulty()
-        );
-
-        boolean newRecord = game.getProgress().recordVictory(score, missionTime);
-        int bestScore = game.getProgress().getBestScore();
-
         game.changeScreen(
-            new VictoryScreen(
+            new MarsScreen(
                 game,
+                missionState,
+                playerStatus,
                 missionTime,
-                playerStatus.getWater(),
-                playerStatus.getFuel(),
-                collectedItems,
-                playerStatus.getOxygen(),
-                score,
-                bestScore,
-                newRecord
+                countCollectedItems()
             )
         );
     }
@@ -1048,6 +1177,16 @@ public class LunarScreen extends ScreenAdapter {
                 )
         );
 
+        for (RepairStation station : repairStations) {
+            station.render(batch, missionState.isRepaired(station.getType()));
+        }
+
+        for (Enemy enemy : enemies) {
+            enemy.render(batch);
+        }
+
+        combatSystem.render(batch);
+
         for (
             CollectibleItem item : items
         ) {
@@ -1084,6 +1223,18 @@ public class LunarScreen extends ScreenAdapter {
             ShapeRenderer.ShapeType.Filled
         );
 
+        for (RepairStation station : repairStations) {
+            station.renderStatus(
+                shapeRenderer,
+                missionState.isRepaired(station.getType()),
+                station == nearbyStation
+            );
+        }
+
+        for (Enemy enemy : enemies) {
+            enemy.renderStatus(shapeRenderer);
+        }
+
         particleManager.render(
             shapeRenderer
         );
@@ -1107,6 +1258,10 @@ public class LunarScreen extends ScreenAdapter {
             batch
         );
 
+        if (missionState.hasWeapon() && !player.isFiringAnimation()) {
+            player.renderWeapon(batch, aimWorld.x, aimWorld.y);
+        }
+
         batch.end();
     }
 
@@ -1123,7 +1278,9 @@ public class LunarScreen extends ScreenAdapter {
             missionTime,
             paused,
             survivalSystem
-                .isMissionFailed()
+                .isMissionFailed(),
+            nearbyStation,
+            portal.isPlayerNear(player)
         );
     }
 

@@ -16,6 +16,7 @@ public class AudioManager {
     private Music ambientMusic;
 
     private Music portalLoopMusic;
+    private Music marsAmbientMusic;
 
     // =========================================================
     // SOUNDS
@@ -46,6 +47,9 @@ public class AudioManager {
     private Sound menuHoverSound;
 
     private Sound footstepSound;
+    private Sound weaponFireSound;
+    private Sound enemyHitSound;
+    private Sound medkitSound;
 
     // =========================================================
     // VOLUME
@@ -133,6 +137,7 @@ public class AudioManager {
                     SoundPaths.PORTAL_LOOP
                 )
             );
+        marsAmbientMusic = Gdx.audio.newMusic(Gdx.files.internal(SoundPaths.AMBIENT_MARS));
 
         pickupOxygenSound =
             loadSound(
@@ -198,6 +203,9 @@ public class AudioManager {
             loadSound(
                 SoundPaths.FOOTSTEP_LUNAR
             );
+        weaponFireSound = loadSound(SoundPaths.WEAPON_FIRE);
+        enemyHitSound = loadSound(SoundPaths.ENEMY_HIT);
+        medkitSound = loadSound(SoundPaths.MEDKIT_PICKUP);
 
         configureMusic();
     }
@@ -230,6 +238,8 @@ public class AudioManager {
         portalLoopMusic.setVolume(
             0f
         );
+        marsAmbientMusic.setLooping(true);
+        marsAmbientMusic.setVolume(getMusicVolume() * 0.72f);
     }
 
     // =========================================================
@@ -507,6 +517,14 @@ public class AudioManager {
                 playVaried(pickupIceSound, 0.82f, 0.90f, 1.02f);
 
                 break;
+
+            case MEDKIT:
+                playVaried(medkitSound, 0.82f, 0.98f, 1.04f);
+                break;
+
+            default:
+                playVaried(pickupIceSound, 0.70f, 1.02f, 1.15f);
+                break;
         }
     }
 
@@ -517,6 +535,29 @@ public class AudioManager {
     public void playIceProcessing() {
 
         playVaried(processIceSound, 0.78f, 0.97f, 1.03f);
+    }
+
+    public void playRepair() {
+        playVaried(processIceSound, 0.70f, 0.86f, 0.94f);
+        playVaried(baseRechargeSound, 0.46f, 1.06f, 1.14f);
+    }
+
+    public void playCraft() {
+        playVaried(processIceSound, 0.78f, 1.10f, 1.18f);
+        playVaried(portalActivateSound, 0.58f, 1.12f, 1.20f);
+    }
+
+    public void playWeaponFire() {
+        playVaried(weaponFireSound, 0.76f, 0.96f, 1.06f);
+    }
+
+    public void playEnemyHit() {
+        playVaried(enemyHitSound, 0.62f, 0.92f, 1.08f);
+    }
+
+    public void playMarsAmbient() {
+        stopAmbientMusic();
+        if (!marsAmbientMusic.isPlaying()) marsAmbientMusic.play();
     }
 
     // =========================================================
@@ -709,6 +750,7 @@ public class AudioManager {
         if (portalLoopMusic != null) {
             portalLoopMusic.setPan(portalPan, getPortalVolume() * portalMix);
         }
+        if (marsAmbientMusic != null) marsAmbientMusic.setVolume(getMusicVolume() * 0.72f);
     }
 
     private float clamp01(
@@ -752,6 +794,7 @@ public class AudioManager {
     public void stopGameplayAudio() {
 
         stopPortalLoop();
+        if (marsAmbientMusic != null) marsAmbientMusic.stop();
     }
 
     // =========================================================
@@ -767,6 +810,7 @@ public class AudioManager {
         if (portalLoopMusic != null) {
             portalLoopMusic.dispose();
         }
+        if (marsAmbientMusic != null) marsAmbientMusic.dispose();
 
         disposeSound(
             pickupOxygenSound
@@ -819,6 +863,9 @@ public class AudioManager {
         disposeSound(
             footstepSound
         );
+        disposeSound(weaponFireSound);
+        disposeSound(enemyHitSound);
+        disposeSound(medkitSound);
     }
 
     private void disposeSound(

@@ -19,6 +19,9 @@ import com.badlogic.gdx.utils.viewport.Viewport;
 
 import com.orion.echoes.lua.LunarEchoesGame;
 import com.orion.echoes.lua.config.Difficulty;
+import com.orion.echoes.lua.config.AstronautType;
+import com.orion.echoes.lua.progress.MissionState;
+import com.orion.echoes.lua.systems.PlayerStatus;
 import com.orion.echoes.lua.ui.UiFonts;
 import com.orion.echoes.lua.ui.UiTheme;
 
@@ -139,6 +142,20 @@ public class MenuScreen extends ScreenAdapter {
             startGame();
             return;
         }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_1)) game.getSettings().setAstronautType(AstronautType.TRIPLE_T);
+        if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_2)) game.getSettings().setAstronautType(AstronautType.WINSTON);
+        if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_3)) game.getSettings().setAstronautType(AstronautType.SHREK);
+        if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_4)) game.getSettings().setAstronautType(AstronautType.NEON);
+        if (Gdx.input.isKeyJustPressed(Input.Keys.FORWARD_DEL)
+            && game.getProgress().hasSavedMission()) {
+            game.getProgress().clearSavedMission();
+            game.getAudio().playMenuClick();
+        }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.L)
+            && game.getProgress().hasSavedMission()) {
+            continueGame();
+            return;
+        }
         if (Gdx.input.isKeyJustPressed(Input.Keys.I)) {
             instructionsOpen = true;
             game.getAudio().playMenuClick();
@@ -202,13 +219,37 @@ public class MenuScreen extends ScreenAdapter {
         if (Gdx.input.isKeyJustPressed(Input.Keys.F)) {
             game.getSettings().toggleFullscreen();
         }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.Q)) game.getSettings().adjustMusicVolume(-0.1f);
+        if (Gdx.input.isKeyJustPressed(Input.Keys.E)) game.getSettings().adjustMusicVolume(0.1f);
+        if (Gdx.input.isKeyJustPressed(Input.Keys.Z)) game.getSettings().adjustSoundVolume(-0.1f);
+        if (Gdx.input.isKeyJustPressed(Input.Keys.X)) game.getSettings().adjustSoundVolume(0.1f);
+        game.getSettings().applyTo(game.getAudio());
     }
 
     private void startGame() {
         if (changingScreen) return;
         changingScreen = true;
         game.getAudio().playMenuClick();
+        game.getProgress().clearSavedMission();
         game.changeScreen(new LunarScreen(game));
+    }
+
+    private void continueGame() {
+        if (changingScreen) return;
+        changingScreen = true;
+        game.getAudio().playMenuClick();
+        MissionState mission = game.getProgress().loadMissionState();
+        PlayerStatus status = game.getProgress().loadPlayerStatus();
+        if ("MARTE".equals(game.getProgress().getSavedScene())) {
+            game.changeScreen(new MarsScreen(game, mission, status,
+                game.getProgress().getSavedMissionTime(),
+                game.getProgress().getSavedCollectedItems(),
+                game.getProgress().getSavedPlayerX(1120f),
+                game.getProgress().getSavedPlayerY(620f)));
+        } else {
+            game.changeScreen(new LunarScreen(game, mission, status,
+                game.getProgress().getSavedMissionTime()));
+        }
     }
 
     private void clear() {
@@ -299,7 +340,7 @@ public class MenuScreen extends ScreenAdapter {
         fonts.label.draw(batch, "PROTOCOLO DE SOBREVIVENCIA LUNAR", 86f, 482f);
         set(fonts.body, UiTheme.MUTED);
         fonts.body.draw(batch,
-            "Explore. Recupere recursos.\nConverta gelo. Ative a extracao.",
+            "Repare a colonia. Fabrique a arma.\nAtravesse o portal rumo a Marte.",
             86f, 447f, 410f, Align.left, true);
 
         buttonText("INICIAR MISSAO", "01", playButton);
@@ -308,13 +349,17 @@ public class MenuScreen extends ScreenAdapter {
         buttonText("ENCERRAR SISTEMA", "04", exitButton);
 
         set(fonts.micro, UiTheme.MUTED);
-        fonts.micro.draw(batch, "ENTER  INICIAR", 68f, 25f);
+        fonts.micro.draw(batch, game.getProgress().hasSavedMission()
+            ? "ENTER NOVA   L CONTINUAR " + game.getProgress().getSavedScene() + "   DEL APAGAR SAVE"
+            : "ENTER  INICIAR", 68f, 25f);
         fonts.micro.draw(batch,
             "MODO " + game.getSettings().getDifficulty().getLabel()
                 + "   //   RECORDE " + game.getProgress().getBestScore(),
             770f, 42f, 430f, Align.right, false);
         set(fonts.micro, UiTheme.CYAN_SOFT);
         fonts.micro.draw(batch, "PORTAL DE EXTRACAO // ONLINE", 835f, 650f);
+        fonts.micro.draw(batch, "ASTRONAUTA  1 TRIPLE T  2 WINSTON  3 SHREK  4 NEON  //  "
+            + game.getSettings().getAstronautType().getLabel(), 650f, 18f, 560f, Align.right, false);
 
         batch.end();
     }
@@ -334,13 +379,13 @@ public class MenuScreen extends ScreenAdapter {
         batch.begin();
         instructionRow("WASD / SETAS", "MOVIMENTO", 451f);
         instructionRow("SHIFT", "CORRER // CONSOME ENERGIA", 403f);
-        instructionRow("E", "PROCESSAR GELO NA BASE", 355f);
-        instructionRow("ESC", "PAUSAR MISSAO", 307f);
-        instructionRow("R", "REINICIAR APOS FALHA", 259f);
+        instructionRow("E", "REPARAR / PROCESSAR GELO", 355f);
+        instructionRow("C", "FABRICAR ARMA NA BASE", 307f);
+        instructionRow("MOUSE / CLIQUE", "MIRAR / DISPARAR A ARMA", 259f);
         set(fonts.label, UiTheme.CYAN);
         fonts.label.draw(batch, "OBJETIVO", 356f, 207f);
         set(fonts.body, UiTheme.TEXT);
-        fonts.body.draw(batch, "Produza agua e H2. Ative o portal. Extraia em seguranca.",
+        fonts.body.draw(batch, "Siga as 4 etapas do HUD e libere a viagem para Marte.",
             356f, 174f);
         modalFooter("VOLTAR");
         batch.end();
@@ -359,14 +404,16 @@ public class MenuScreen extends ScreenAdapter {
         int volume = Math.round(game.getSettings().getMasterVolume() * 100f);
 
         batch.begin();
-        optionRow("DIFICULDADE", "<  " + difficulty.getLabel() + "  >", 443f);
-        optionRow("VOLUME GERAL", volume + "%", 381f);
-        optionRow("AUDIO", game.getSettings().isMuted() ? "DESATIVADO" : "ATIVO", 319f);
-        optionRow("EXIBICAO", game.getSettings().isFullscreen() ? "TELA CHEIA" : "JANELA", 257f);
+        optionRow("DIFICULDADE", "<  " + difficulty.getLabel() + "  >", 455f);
+        optionRow("VOLUME GERAL", volume + "%", 405f);
+        optionRow("MUSICA  Q / E", Math.round(game.getSettings().getMusicVolume() * 100f) + "%", 355f);
+        optionRow("EFEITOS  Z / X", Math.round(game.getSettings().getSoundVolume() * 100f) + "%", 305f);
+        optionRow("AUDIO", game.getSettings().isMuted() ? "DESATIVADO" : "ATIVO", 255f);
+        optionRow("EXIBICAO", game.getSettings().isFullscreen() ? "TELA CHEIA" : "JANELA", 205f);
         set(fonts.micro, UiTheme.MUTED);
         fonts.micro.draw(batch,
             "ESQ/DIR  DIFICULDADE    CIMA/BAIXO  VOLUME    M  AUDIO    F  EXIBICAO",
-            0f, 188f, WIDTH, Align.center, false);
+            0f, 162f, WIDTH, Align.center, false);
         modalFooter("SALVAR E VOLTAR");
         batch.end();
     }

@@ -107,10 +107,11 @@ public class MarsScreen extends ScreenAdapter {
         surfaceTexture = game.getAssets().getMarsSurface();
         marsBaseTexture = game.getAssets().getMarsBase();
         satellites = new Array<>();
-        satellites.add(new MarsSatellite(0, 520f, 1050f, game.getAssets()));
-        satellites.add(new MarsSatellite(1, 2260f, 1030f, game.getAssets()));
-        satellites.add(new MarsSatellite(2, 2070f, 300f, game.getAssets()));
-        satellites.add(new MarsSatellite(3, 2920f, 1450f, game.getAssets()));
+        // Quatro vertices regulares ao redor da base: leitura imediata e rota equilibrada.
+        satellites.add(new MarsSatellite(0, 560f, 980f, game.getAssets()));
+        satellites.add(new MarsSatellite(1, 1570f, 980f, game.getAssets()));
+        satellites.add(new MarsSatellite(2, 560f, 180f, game.getAssets()));
+        satellites.add(new MarsSatellite(3, 1570f, 180f, game.getAssets()));
         marsBaseBounds = new Rectangle(900f, 500f, 460f, 240f);
         createMarsGameplay();
         if ("MARTE".equals(game.getProgress().getSavedScene())) {

@@ -14,6 +14,7 @@ public class RepairStation {
     private final Rectangle bounds;
     private final Sprite brokenSprite;
     private final Sprite repairedSprite;
+    private final Sprite hammerSprite;
     private float animationTime;
     private float repairProgress;
     private boolean repairing;
@@ -25,6 +26,9 @@ public class RepairStation {
         this.bounds = new Rectangle(x, y, 112f, 96f);
         brokenSprite = createSprite(assets.getRepairStationBroken(), x, y);
         repairedSprite = createSprite(assets.getRepairStation(), x, y);
+        hammerSprite = new Sprite(assets.getRepairHammer());
+        hammerSprite.setSize(58f, 58f);
+        hammerSprite.setOriginCenter();
     }
 
     private Sprite createSprite(com.badlogic.gdx.graphics.Texture texture, float x, float y) {
@@ -54,6 +58,15 @@ public class RepairStation {
         active.setColor(Color.WHITE);
         active.setRotation(repairing ? MathUtils.sin(animationTime * 18f) * 0.8f : 0f);
         active.draw(batch);
+        if (repairing) renderRepairTool(batch);
+    }
+
+    private void renderRepairTool(SpriteBatch batch) {
+        float impact = (MathUtils.sin(animationTime * 13f) + 1f) * 0.5f;
+        hammerSprite.setPosition(getCenterX() + 18f, bounds.y + bounds.height + 6f);
+        hammerSprite.setRotation(-22f - impact * 36f);
+        hammerSprite.setColor(1f, 1f, 1f, 0.98f);
+        hammerSprite.draw(batch);
     }
 
     public void renderStatus(ShapeRenderer shapes, boolean repaired, boolean nearby) {
@@ -62,21 +75,25 @@ public class RepairStation {
         shapes.setColor(accent.r, accent.g, accent.b, nearby ? 1f : 0.72f);
         shapes.circle(bounds.x + bounds.width - 14f, bounds.y + bounds.height - 6f,
             nearby ? 9f : 6f, 18);
-        if (repairing) renderRepairAnimation(shapes);
+        if (repairing) renderRepairProgress(shapes, accent);
     }
 
-    private void renderRepairAnimation(ShapeRenderer shapes) {
+    private void renderRepairProgress(ShapeRenderer shapes, Color accent) {
         float cx = getCenterX();
-        float y = bounds.y + bounds.height + 31f;
-        float swing = -28f + MathUtils.sin(animationTime * 11f) * 24f;
-        shapes.setColor(0.72f, 0.46f, 0.18f, 1f);
-        shapes.rect(cx - 3f, y - 4f, 3f, 4f, 6f, 32f, 1f, 1f, swing);
-        shapes.setColor(0.82f, 0.88f, 0.92f, 1f);
-        shapes.rect(cx - 14f, y + 22f, 28f, 10f);
-        shapes.setColor(0.01f, 0.02f, 0.03f, 0.92f);
-        shapes.rect(cx - 46f, y - 17f, 92f, 7f);
-        shapes.setColor(0.16f, 0.90f, 1f, 1f);
-        shapes.rect(cx - 46f, y - 17f, 92f * getRepairProgress(), 7f);
+        float y = bounds.y + bounds.height + 2f;
+        float progress = getRepairProgress();
+        shapes.setColor(0.002f, 0.012f, 0.020f, 0.94f);
+        shapes.rect(cx - 57f, y, 114f, 24f);
+        shapes.setColor(accent.r, accent.g, accent.b, 0.28f);
+        shapes.rect(cx - 57f, y + 22f, 114f, 2f);
+        shapes.setColor(0.07f, 0.12f, 0.15f, 1f);
+        shapes.rect(cx - 49f, y + 8f, 98f, 7f);
+        shapes.setColor(accent.r, accent.g, accent.b, 1f);
+        shapes.rect(cx - 49f, y + 8f, 98f * progress, 7f);
+        shapes.setColor(0.76f, 0.97f, 1f, 0.82f);
+        shapes.rect(cx - 49f, y + 13f, 98f * progress, 2f);
+        shapes.setColor(0.01f, 0.025f, 0.035f, 0.78f);
+        for (int i = 1; i < 4; i++) shapes.rect(cx - 49f + i * 24.5f, y + 8f, 1f, 7f);
     }
 
     public void startRepair() {

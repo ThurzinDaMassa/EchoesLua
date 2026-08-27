@@ -16,6 +16,7 @@ public class MarsSatellite {
     private final Rectangle bounds;
     private final Sprite brokenSprite;
     private final Sprite repairedSprite;
+    private final Sprite hammerSprite;
     private float animationTime;
     private float repairTime;
     private boolean repairing;
@@ -25,6 +26,9 @@ public class MarsSatellite {
         bounds = new Rectangle(x, y, 128f, 98f);
         brokenSprite = createSprite(assets.getMarsSatelliteBroken(), x, y);
         repairedSprite = createSprite(assets.getMarsSatelliteRepaired(), x, y);
+        hammerSprite = new Sprite(assets.getRepairHammer());
+        hammerSprite.setSize(62f, 62f);
+        hammerSprite.setOriginCenter();
     }
 
     private Sprite createSprite(com.badlogic.gdx.graphics.Texture texture, float x, float y) {
@@ -47,14 +51,23 @@ public class MarsSatellite {
         active.setRotation(repairing ? MathUtils.sin(animationTime * 18f) * 0.7f : 0f);
         active.setColor(Color.WHITE);
         active.draw(batch);
+        if (repairing) renderRepairTool(batch);
+    }
+
+    private void renderRepairTool(SpriteBatch batch) {
+        float impact = (MathUtils.sin(animationTime * 13f) + 1f) * 0.5f;
+        hammerSprite.setPosition(getCenterX() + 16f, bounds.y + bounds.height + 7f);
+        hammerSprite.setRotation(-20f - impact * 38f);
+        hammerSprite.setColor(1f, 1f, 1f, 0.98f);
+        hammerSprite.draw(batch);
     }
 
     public void renderGlow(ShapeRenderer shapes, boolean repaired, boolean nearby) {
         Color accent = repaired ? new Color(0.20f, 0.96f, 0.62f, 1f)
             : repairing ? new Color(1f, 0.66f, 0.16f, 1f)
             : new Color(0.96f, 0.30f, 0.14f, 1f);
-        shapes.setColor(accent.r, accent.g, accent.b, nearby ? 0.34f : 0.16f);
-        shapes.circle(getCenterX(), getCenterY(), nearby ? 86f : 70f, 30);
+        shapes.setColor(accent.r, accent.g, accent.b, nearby ? 0.11f : 0.055f);
+        shapes.circle(getCenterX(), getCenterY(), nearby ? 76f : 65f, 30);
     }
 
     public void renderRepairOverlay(ShapeRenderer shapes, boolean repaired, boolean nearby) {
@@ -64,21 +77,25 @@ public class MarsSatellite {
         shapes.setColor(accent);
         shapes.circle(bounds.x + bounds.width - 9f, bounds.y + bounds.height - 3f,
             nearby ? 8f : 5f, 18);
-        if (repairing) renderHammer(shapes);
+        if (repairing) renderRepairProgress(shapes, accent);
     }
 
-    private void renderHammer(ShapeRenderer shapes) {
+    private void renderRepairProgress(ShapeRenderer shapes, Color accent) {
         float cx = getCenterX();
-        float y = bounds.y + bounds.height + 42f;
-        float swing = -28f + MathUtils.sin(animationTime * 11f) * 24f;
-        shapes.setColor(0.72f, 0.42f, 0.16f, 1f);
-        shapes.rect(cx - 3f, y - 5f, 3f, 5f, 6f, 34f, 1f, 1f, swing);
-        shapes.setColor(0.84f, 0.90f, 0.94f, 1f);
-        shapes.rect(cx - 15f, y + 24f, 30f, 11f);
-        shapes.setColor(0.02f, 0.02f, 0.02f, 0.92f);
-        shapes.rect(cx - 50f, y - 19f, 100f, 8f);
-        shapes.setColor(1f, 0.48f, 0.14f, 1f);
-        shapes.rect(cx - 50f, y - 19f, 100f * getRepairProgress(), 8f);
+        float y = bounds.y + bounds.height + 2f;
+        float progress = getRepairProgress();
+        shapes.setColor(0.018f, 0.010f, 0.008f, 0.95f);
+        shapes.rect(cx - 61f, y, 122f, 25f);
+        shapes.setColor(accent.r, accent.g, accent.b, 0.30f);
+        shapes.rect(cx - 61f, y + 23f, 122f, 2f);
+        shapes.setColor(0.15f, 0.075f, 0.035f, 1f);
+        shapes.rect(cx - 52f, y + 8f, 104f, 8f);
+        shapes.setColor(accent.r, accent.g, accent.b, 1f);
+        shapes.rect(cx - 52f, y + 8f, 104f * progress, 8f);
+        shapes.setColor(1f, 0.86f, 0.56f, 0.86f);
+        shapes.rect(cx - 52f, y + 14f, 104f * progress, 2f);
+        shapes.setColor(0.035f, 0.018f, 0.010f, 0.78f);
+        for (int i = 1; i < 4; i++) shapes.rect(cx - 52f + i * 26f, y + 8f, 1f, 8f);
     }
 
     public boolean isPlayerNear(Player player) {

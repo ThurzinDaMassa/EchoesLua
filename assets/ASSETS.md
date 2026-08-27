@@ -33,10 +33,13 @@ Os seguintes assets foram criados especificamente para os sistemas do Desafio 02
 | `textures/mars_medkit.png` | Kit medico marciano de alta visibilidade |
 | `textures/mars_ice_sample.png` | Amostra mineral marciana com veios de gelo |
 | `textures/enemy_mars_skimmer.png` | Drone planador hostil exclusivo de Marte |
-| `textures/repair_station_broken.png` | Estado quebrado das quatro estacoes lunares |
-| `textures/mars_satellite_broken.png` | Estado danificado dos quatro satelites marcianos |
+| `textures/repair_station_broken_v2.png` | Estado lunar com estrutura rompida, cabos e placas expostas |
+| `textures/mars_satellite_broken_v2.png` | Satelite marciano destruido, oxidado e coberto de poeira |
+| `textures/repair_hammer_v2.png` | Ferramenta EVA animada durante os reparos de tres segundos |
 | `textures/mars_satellite_repaired.png` | Estado operacional dos satelites marcianos |
-| `ui/mission_protocol_intro.png` | Abertura cinematografica fotorrealista do protocolo lunar |
+| `ui/mission_intro_01_distress.png` | Ato 1: sinal de emergencia recebido em orbita |
+| `ui/mission_intro_02_failure.png` | Ato 2: sala de operacoes lunar avariada |
+| `ui/mission_intro_03_deployment.png` | Ato 3: astronauta inicia a missao de superficie |
 | `sounds/player_damage.wav` | Impacto de dano no traje do astronauta |
 
 Os sprites usam fundo transparente. Cada item importante possui silhueta,

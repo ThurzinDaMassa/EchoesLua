@@ -116,11 +116,13 @@ public class LunarScreen extends ScreenAdapter {
 
     private final float forcedStartY;
 
+    private final boolean showProtocolIntro;
+
     public LunarScreen(
         LunarEchoesGame game
     ) {
 
-        this(game, null, null, 0f, Float.NaN, Float.NaN);
+        this(game, null, null, 0f, Float.NaN, Float.NaN, true);
     }
 
     public LunarScreen(
@@ -130,7 +132,7 @@ public class LunarScreen extends ScreenAdapter {
         float resumedTime
     ) {
 
-        this(game, resumedMission, resumedStatus, resumedTime, Float.NaN, Float.NaN);
+        this(game, resumedMission, resumedStatus, resumedTime, Float.NaN, Float.NaN, false);
     }
 
     public LunarScreen(
@@ -140,6 +142,20 @@ public class LunarScreen extends ScreenAdapter {
         float resumedTime,
         float forcedStartX,
         float forcedStartY
+    ) {
+
+        this(game, resumedMission, resumedStatus, resumedTime,
+            forcedStartX, forcedStartY, false);
+    }
+
+    private LunarScreen(
+        LunarEchoesGame game,
+        MissionState resumedMission,
+        PlayerStatus resumedStatus,
+        float resumedTime,
+        float forcedStartX,
+        float forcedStartY,
+        boolean showProtocolIntro
     ) {
 
         this.game = game;
@@ -155,6 +171,7 @@ public class LunarScreen extends ScreenAdapter {
         this.resumedTime = resumedTime;
         this.forcedStartX = forcedStartX;
         this.forcedStartY = forcedStartY;
+        this.showProtocolIntro = showProtocolIntro;
     }
 
     @Override
@@ -179,7 +196,7 @@ public class LunarScreen extends ScreenAdapter {
 
         createHud();
 
-        protocolOverlay = resumedMission == null
+        protocolOverlay = showProtocolIntro
             ? new MissionProtocolOverlay(game.getAssets()) : null;
 
         positionCameraImmediately();

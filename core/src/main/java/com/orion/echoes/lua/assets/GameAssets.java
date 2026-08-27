@@ -77,9 +77,12 @@ public class GameAssets {
         loadTexture(AssetPaths.ENERGY_PROJECTILE);
         loadTexture(AssetPaths.REPAIR_STATION);
         loadTexture(AssetPaths.REPAIR_STATION_BROKEN);
+        loadTexture(AssetPaths.REPAIR_HAMMER);
         loadTexture(AssetPaths.MARS_SATELLITE_BROKEN);
         loadTexture(AssetPaths.MARS_SATELLITE_REPAIRED);
-        loadTexture(AssetPaths.MISSION_PROTOCOL_INTRO);
+        loadTexture(AssetPaths.MISSION_INTRO_DISTRESS);
+        loadTexture(AssetPaths.MISSION_INTRO_FAILURE);
+        loadTexture(AssetPaths.MISSION_INTRO_DEPLOYMENT);
         loadTexture(AssetPaths.MARS_BASE);
         loadTexture(AssetPaths.MARS_RESEARCH_SITE);
 
@@ -163,9 +166,12 @@ public class GameAssets {
         setLinear(AssetPaths.ENERGY_PROJECTILE);
         setLinear(AssetPaths.REPAIR_STATION);
         setLinear(AssetPaths.REPAIR_STATION_BROKEN);
+        setLinear(AssetPaths.REPAIR_HAMMER);
         setLinear(AssetPaths.MARS_SATELLITE_BROKEN);
         setLinear(AssetPaths.MARS_SATELLITE_REPAIRED);
-        setLinear(AssetPaths.MISSION_PROTOCOL_INTRO);
+        setLinear(AssetPaths.MISSION_INTRO_DISTRESS);
+        setLinear(AssetPaths.MISSION_INTRO_FAILURE);
+        setLinear(AssetPaths.MISSION_INTRO_DEPLOYMENT);
         setLinear(AssetPaths.MARS_BASE);
         setLinear(AssetPaths.MARS_RESEARCH_SITE);
     }
@@ -277,9 +283,12 @@ public class GameAssets {
     public Texture getEnergyProjectile() { return getTexture(AssetPaths.ENERGY_PROJECTILE); }
     public Texture getRepairStation() { return getTexture(AssetPaths.REPAIR_STATION); }
     public Texture getRepairStationBroken() { return getTexture(AssetPaths.REPAIR_STATION_BROKEN); }
+    public Texture getRepairHammer() { return getTexture(AssetPaths.REPAIR_HAMMER); }
     public Texture getMarsSatelliteBroken() { return getTexture(AssetPaths.MARS_SATELLITE_BROKEN); }
     public Texture getMarsSatelliteRepaired() { return getTexture(AssetPaths.MARS_SATELLITE_REPAIRED); }
-    public Texture getMissionProtocolIntro() { return getTexture(AssetPaths.MISSION_PROTOCOL_INTRO); }
+    public Texture getMissionIntroDistress() { return getTexture(AssetPaths.MISSION_INTRO_DISTRESS); }
+    public Texture getMissionIntroFailure() { return getTexture(AssetPaths.MISSION_INTRO_FAILURE); }
+    public Texture getMissionIntroDeployment() { return getTexture(AssetPaths.MISSION_INTRO_DEPLOYMENT); }
     public Texture getMarsBase() { return getTexture(AssetPaths.MARS_BASE); }
     public Texture getMarsResearchSite() { return getTexture(AssetPaths.MARS_RESEARCH_SITE); }
 

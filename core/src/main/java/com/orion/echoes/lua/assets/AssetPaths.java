@@ -83,13 +83,19 @@ public final class AssetPaths {
     public static final String REPAIR_STATION =
         "textures/repair_station.png";
     public static final String REPAIR_STATION_BROKEN =
-        "textures/repair_station_broken.png";
+        "textures/repair_station_broken_v2.png";
+    public static final String REPAIR_HAMMER =
+        "textures/repair_hammer_v2.png";
     public static final String MARS_SATELLITE_BROKEN =
-        "textures/mars_satellite_broken.png";
+        "textures/mars_satellite_broken_v2.png";
     public static final String MARS_SATELLITE_REPAIRED =
         "textures/mars_satellite_repaired.png";
-    public static final String MISSION_PROTOCOL_INTRO =
-        "ui/mission_protocol_intro.png";
+    public static final String MISSION_INTRO_DISTRESS =
+        "ui/mission_intro_01_distress.png";
+    public static final String MISSION_INTRO_FAILURE =
+        "ui/mission_intro_02_failure.png";
+    public static final String MISSION_INTRO_DEPLOYMENT =
+        "ui/mission_intro_03_deployment.png";
 
     public static final String MARS_BASE =
         "textures/mars_base.png";

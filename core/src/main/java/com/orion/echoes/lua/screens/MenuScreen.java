@@ -33,14 +33,14 @@ public class MenuScreen extends ScreenAdapter {
     private final LunarEchoesGame game;
     private final SpriteBatch batch;
     private final Vector2 mouse = new Vector2();
-    private final Rectangle playButton = new Rectangle(86f, 294f, 420f, 58f);
-    private final Rectangle instructionsButton = new Rectangle(86f, 222f, 420f, 58f);
-    private final Rectangle optionsButton = new Rectangle(86f, 150f, 420f, 58f);
-    private final Rectangle exitButton = new Rectangle(86f, 78f, 420f, 58f);
+    private final Rectangle playButton = new Rectangle(86f, 258f, 420f, 56f);
+    private final Rectangle instructionsButton = new Rectangle(86f, 194f, 420f, 56f);
+    private final Rectangle optionsButton = new Rectangle(86f, 130f, 420f, 56f);
+    private final Rectangle exitButton = new Rectangle(86f, 66f, 420f, 56f);
     private final Rectangle[] difficultyButtons = {
-        new Rectangle(86f, 365f, 128f, 42f),
-        new Rectangle(225f, 365f, 128f, 42f),
-        new Rectangle(364f, 365f, 142f, 42f)
+        new Rectangle(86f, 330f, 128f, 42f),
+        new Rectangle(225f, 330f, 128f, 42f),
+        new Rectangle(364f, 330f, 142f, 42f)
     };
     private final float[] starX = new float[STAR_COUNT];
     private final float[] starY = new float[STAR_COUNT];
@@ -375,12 +375,11 @@ public class MenuScreen extends ScreenAdapter {
         set(fonts.label, UiTheme.CYAN_SOFT);
         fonts.label.draw(batch, "PROTOCOLO DE SOBREVIVENCIA LUNAR", 86f, 482f);
         set(fonts.body, UiTheme.MUTED);
-        fonts.body.draw(batch,
-            "Repare a colonia. Fabrique a arma.\nAtravesse o portal rumo a Marte.",
-            86f, 447f, 410f, Align.left, true);
+        fonts.body.draw(batch, "Repare a colonia. Fabrique a arma.", 86f, 447f);
+        fonts.body.draw(batch, "Atravesse o portal rumo a Marte.", 86f, 421f);
 
         set(fonts.micro, UiTheme.CYAN_SOFT);
-        fonts.micro.draw(batch, "ESCOLHA A DIFICULDADE", 86f, 418f);
+        fonts.micro.draw(batch, "ESCOLHA A DIFICULDADE", 86f, 397f);
         Difficulty[] levels = Difficulty.values();
         for (int i = 0; i < levels.length; i++) {
             Rectangle button = difficultyButtons[i];

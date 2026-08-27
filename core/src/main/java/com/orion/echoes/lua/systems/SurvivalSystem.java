@@ -65,6 +65,15 @@ public class SurvivalSystem {
         );
     }
 
+    /** Updates survival while the player is fully exposed to the lunar surface. */
+    public void updateExposed(float delta, PlayerStatus status) {
+        if (missionFailed) return;
+        checkMissionFailure(status);
+        if (missionFailed) return;
+        consumeOxygen(delta, status);
+        checkMissionFailure(status);
+    }
+
     // =========================================================
     // CONSUMO
     // =========================================================

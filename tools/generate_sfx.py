@@ -35,6 +35,14 @@ def medkit(t, length):
     notes = math.sin(2 * math.pi * 659 * t) + .55 * math.sin(2 * math.pi * 988 * t)
     return notes * .28 * env
 
+def damage(t, length):
+    attack = min(1, t * 100)
+    env = attack * math.exp(-t * 9.5)
+    suit_thump = math.sin(2 * math.pi * (118 - 42 * t) * t) * .62
+    alarm = math.sin(2 * math.pi * 720 * t) * math.exp(-t * 18) * .22
+    grit = (random.random() * 2 - 1) * .20
+    return (suit_thump + alarm + grit) * env
+
 def mars(t, length):
     fade = min(1, t * 1.5, (length - t) * 1.5)
     wind = (random.random() * 2 - 1) * .07
@@ -46,3 +54,4 @@ save("weapon_fire.wav", .34, fire)
 save("enemy_hit.wav", .30, hit)
 save("medkit_pickup.wav", .55, medkit)
 save("ambient_mars.wav", 8.0, mars)
+save("player_damage.wav", .46, damage)

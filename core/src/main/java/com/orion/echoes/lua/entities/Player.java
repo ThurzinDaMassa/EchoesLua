@@ -4,6 +4,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.MathUtils;
@@ -12,6 +13,7 @@ import com.badlogic.gdx.math.Vector2;
 
 import com.orion.echoes.lua.assets.GameAssets;
 import com.orion.echoes.lua.config.AstronautType;
+import com.orion.echoes.lua.config.CharacterAnimationProfile;
 import com.orion.echoes.lua.systems.PlayerStatus;
 import com.orion.echoes.lua.utils.GameConstants;
 
@@ -40,9 +42,14 @@ public class Player {
     private final Sprite sprite;
 
     private final Sprite weaponSprite;
-    private final TextureRegion[] actionFrames;
-    private int actionPose = -1;
-    private float actionTimer;
+    private final TextureRegion[] locomotionFrames;
+    private final CharacterAnimationProfile animationProfile;
+    private final float frameScale;
+    private float animationClock;
+    private int animationState = -1;
+    private float fireAnimationTimer;
+    private float craftAnimationTimer;
+    private float damageFlashTimer;
 
     // =========================================================
     // ESTADO
@@ -91,18 +98,26 @@ public class Player {
         bounds =
             new Rectangle();
 
-        Texture actionTexture = assets.getAstronaut(astronautType);
-        int frameWidth = actionTexture.getWidth() / 5;
-        actionFrames = new TextureRegion[5];
-        for (int i = 0; i < actionFrames.length; i++) {
-            actionFrames[i] = new TextureRegion(actionTexture, i * frameWidth, 0,
-                frameWidth, actionTexture.getHeight());
+        Texture locomotionTexture = assets.getAstronautLocomotion(astronautType);
+        int frameWidth = locomotionTexture.getWidth() / 4;
+        int frameHeight = locomotionTexture.getHeight() / 3;
+        animationProfile = CharacterAnimationProfile.forType(astronautType);
+        frameScale = animationProfile.getScale();
+        locomotionFrames = new TextureRegion[12];
+        for (int row = 0; row < 3; row++) {
+            for (int column = 0; column < 4; column++) {
+                locomotionFrames[row * 4 + column] = new TextureRegion(
+                    locomotionTexture,
+                    column * frameWidth,
+                    row * frameHeight,
+                    frameWidth,
+                    frameHeight);
+            }
         }
-        sprite = new Sprite(actionFrames[0]);
-
+        sprite = new Sprite(locomotionFrames[0]);
         sprite.setSize(
-            GameConstants.PLAYER_WIDTH,
-            GameConstants.PLAYER_HEIGHT
+            frameWidth * frameScale,
+            frameHeight * frameScale
         );
 
         sprite.setOriginCenter();
@@ -118,8 +133,8 @@ public class Player {
 
         moving = false;
 
-        // A arte original do astronauta aponta para a esquerda.
-        facingLeft = true;
+        // As folhas de animacao novas foram desenhadas olhando para a direita.
+        facingLeft = false;
 
         sprinting = false;
 
@@ -144,8 +159,9 @@ public class Player {
          * Isso e usado pelo sistema de colisao
          * com obstaculos.
          */
-        actionTimer = Math.max(0f, actionTimer - delta);
-        if (actionTimer <= 0f) actionPose = -1;
+        fireAnimationTimer = Math.max(0f, fireAnimationTimer - delta);
+        craftAnimationTimer = Math.max(0f, craftAnimationTimer - delta);
+        damageFlashTimer = Math.max(0f, damageFlashTimer - delta);
 
         previousPosition.set(
             position
@@ -157,6 +173,8 @@ public class Player {
             delta,
             status
         );
+
+        updateAnimationClock(delta);
 
         limitToWorld();
 
@@ -325,27 +343,58 @@ public class Player {
 
     private void updateSprite() {
 
-        int pose = actionPose >= 0 ? actionPose : !moving ? 0 : sprinting ? 2 : 1;
-        sprite.setRegion(actionFrames[pose]);
+        int row = !moving ? 0 : sprinting ? 2 : 1;
+        int frame = ((int) animationClock) & 3;
+        int frameIndex = row * 4 + frame;
+        sprite.setRegion(locomotionFrames[frameIndex]);
 
-        float bob = moving
-            ? MathUtils.sin(movementTime) * (sprinting ? 3f : 1.7f)
-            : 0f;
+        // Os proprios quadros ja possuem movimento. Manter o idle preso ao chao
+        // evita o efeito de deslizar/flutuar quando nenhuma tecla esta pressionada.
+        float bob = !moving ? 0f
+            : MathUtils.sin(movementTime) * (sprinting ? 0.7f : 0.4f);
+        if (craftAnimationTimer > 0f) bob += MathUtils.sin(craftAnimationTimer * 28f) * 1.5f;
+
+        float visibleCenterX = animationProfile.getCenterX(frameIndex);
+        if (facingLeft) {
+            visibleCenterX = CharacterAnimationProfile.FRAME_WIDTH - visibleCenterX;
+        }
+        float feetFromCellBottom = CharacterAnimationProfile.FRAME_HEIGHT
+            - animationProfile.getBottomY(frameIndex);
+        float originX = visibleCenterX * frameScale;
+        float originY = feetFromCellBottom * frameScale;
+
+        sprite.setOrigin(originX, originY);
 
         sprite.setPosition(
-            position.x,
-            position.y + bob
+            getCenterX() - originX,
+            position.y - originY + bob
         );
 
-        sprite.setRotation(moving ? -direction.x * bob * 0.8f : 0f);
+        float recoil = fireAnimationTimer > 0f
+            ? MathUtils.sin(fireAnimationTimer / 0.14f * MathUtils.PI) * 2.4f : 0f;
+        float craftTilt = craftAnimationTimer > 0f
+            ? MathUtils.sin(craftAnimationTimer * 18f) * 1.8f : 0f;
+        sprite.setRotation((moving ? -direction.x * bob * 0.35f : 0f)
+            + (facingLeft ? recoil : -recoil) + craftTilt);
 
         /*
          * O flip e feito apenas no eixo X.
          */
         sprite.setFlip(
-            !facingLeft,
+            facingLeft,
             false
         );
+    }
+
+    private void updateAnimationClock(float delta) {
+        int state = !moving ? 0 : sprinting ? 2 : 1;
+        if (state != animationState) {
+            animationState = state;
+            animationClock = 0f;
+        }
+        float framesPerSecond = state == 0 ? 2.2f : state == 1 ? 7.5f : 11.5f;
+        animationClock += delta * framesPerSecond;
+        if (animationClock >= 4f) animationClock -= 4f;
     }
 
     // =========================================================
@@ -467,10 +516,16 @@ public class Player {
     public void render(
         SpriteBatch batch
     ) {
-
+        if (damageFlashTimer > 0f) {
+            float pulse = 0.35f + MathUtils.sin(damageFlashTimer * 38f) * 0.15f;
+            sprite.setColor(1f, pulse, pulse, 1f);
+        } else {
+            sprite.setColor(Color.WHITE);
+        }
         sprite.draw(
             batch
         );
+        sprite.setColor(Color.WHITE);
     }
 
     public void renderWeapon(SpriteBatch batch, float aimX, float aimY) {
@@ -479,7 +534,11 @@ public class Player {
         float angle = MathUtils.atan2(aimY - originY, aimX - originX) * MathUtils.radiansToDegrees;
         boolean aimLeft = aimX < originX;
 
-        weaponSprite.setPosition(originX - 18f, originY - 23.5f);
+        float recoil = fireAnimationTimer > 0f
+            ? MathUtils.sin(fireAnimationTimer / 0.14f * MathUtils.PI) * 7f : 0f;
+        float radians = angle * MathUtils.degreesToRadians;
+        weaponSprite.setPosition(originX - 18f - MathUtils.cos(radians) * recoil,
+            originY - 23.5f - MathUtils.sin(radians) * recoil);
         weaponSprite.setRotation(angle);
         weaponSprite.setFlip(false, aimLeft);
         weaponSprite.draw(batch);
@@ -488,21 +547,23 @@ public class Player {
     public void setFacingTowards(float worldX) {
         if (Math.abs(worldX - getCenterX()) > 2f) {
             facingLeft = worldX < getCenterX();
-            sprite.setFlip(!facingLeft, false);
+            sprite.setFlip(facingLeft, false);
         }
     }
 
     public void triggerFireAnimation() {
-        actionPose = 3;
-        actionTimer = 0.12f;
+        fireAnimationTimer = 0.14f;
     }
 
     public void triggerCraftAnimation() {
-        actionPose = 4;
-        actionTimer = 0.55f;
+        craftAnimationTimer = 0.70f;
     }
 
-    public boolean isFiringAnimation() { return actionPose == 3 && actionTimer > 0f; }
+    public void triggerDamageFlash() {
+        damageFlashTimer = 0.46f;
+    }
+
+    public boolean isFiringAnimation() { return fireAnimationTimer > 0f; }
 
     // =========================================================
     // GETTERS DE POSICAO

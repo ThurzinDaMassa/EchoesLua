@@ -34,7 +34,7 @@ public class CombatSystem {
         this.enemyDamageMultiplier = difficulty.getEnemyDamageMultiplier();
     }
 
-    public void update(float delta, Player player, PlayerStatus status,
+    public boolean update(float delta, Player player, PlayerStatus status,
                        MissionState mission, Array<Enemy> enemies,
                        ParticleManager particles, AudioManager audio,
                        float aimX, float aimY, boolean firing) {
@@ -42,7 +42,7 @@ public class CombatSystem {
         fireCooldown = Math.max(0f, fireCooldown - delta);
         blockedMessageCooldown = Math.max(0f, blockedMessageCooldown - delta);
 
-        updateEnemies(delta, player, status, enemies, audio);
+        boolean playerDamaged = updateEnemies(delta, player, status, enemies);
 
         aimDirection.set(aimX - player.getCenterX(), aimY - player.getCenterY());
         if (aimDirection.isZero(0.001f)) aimDirection.set(player.isFacingLeft() ? -1f : 1f, 0f);
@@ -58,18 +58,21 @@ public class CombatSystem {
         }
 
         updateProjectiles(delta, mission, enemies, particles, audio);
+        return playerDamaged;
     }
 
-    private void updateEnemies(float delta, Player player, PlayerStatus status,
-                               Array<Enemy> enemies, AudioManager audio) {
+    private boolean updateEnemies(float delta, Player player, PlayerStatus status,
+                                  Array<Enemy> enemies) {
+        boolean damaged = false;
         for (Enemy enemy : enemies) {
             enemy.update(delta, player);
             if (enemy.overlaps(player) && contactCooldown <= 0f) {
                 status.removeHealth(18f * enemyDamageMultiplier);
                 contactCooldown = 1.10f;
-                audio.playRockImpact();
+                damaged = true;
             }
         }
+        return damaged;
     }
 
     private void fire(Player player, ParticleManager particles, AudioManager audio) {

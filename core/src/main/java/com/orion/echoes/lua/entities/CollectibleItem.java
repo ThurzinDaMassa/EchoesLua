@@ -4,6 +4,7 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 
@@ -35,6 +36,17 @@ public class CollectibleItem {
         GameAssets assets
     ) {
 
+        this(type, x, y, assets, false);
+    }
+
+    public CollectibleItem(
+        ItemType type,
+        float x,
+        float y,
+        GameAssets assets,
+        boolean marsVariant
+    ) {
+
         this.type =
             type;
 
@@ -46,7 +58,8 @@ public class CollectibleItem {
         Texture texture =
             getTextureForType(
                 type,
-                assets
+                assets,
+                marsVariant
             );
 
         sprite =
@@ -84,21 +97,22 @@ public class CollectibleItem {
 
     private Texture getTextureForType(
         ItemType type,
-        GameAssets assets
+        GameAssets assets,
+        boolean marsVariant
     ) {
 
         switch (type) {
 
             case OXYGEN:
-                return assets.getOxygen();
+                return marsVariant ? assets.getMarsOxygen() : assets.getOxygen();
 
             case FOOD:
-                return assets.getFood();
+                return marsVariant ? assets.getMarsFood() : assets.getFood();
 
             case ICE_ROCK:
-                return assets.getIceRock();
+                return marsVariant ? assets.getMarsIceSample() : assets.getIceRock();
             case MEDKIT:
-                return assets.getMedkit();
+                return marsVariant ? assets.getMarsMedkit() : assets.getMedkit();
 
             case ANTENNA_PART:
                 return assets.getAntennaPart();
@@ -207,6 +221,27 @@ public class CollectibleItem {
         sprite.draw(
             batch
         );
+    }
+
+    public void renderGlow(ShapeRenderer shapes, boolean missionTarget) {
+        if (collected) return;
+        Color glow = getGlowColor();
+        float pulse = 1f + MathUtils.sin(animationTime * 3.4f) * 0.10f;
+        float radius = (bounds.width * 0.62f + (missionTarget ? 13f : 7f)) * pulse;
+        shapes.setColor(glow.r, glow.g, glow.b, missionTarget ? 0.24f : 0.13f);
+        shapes.circle(getCenterX(), getCenterY(), radius, 28);
+        shapes.setColor(glow.r, glow.g, glow.b, missionTarget ? 0.34f : 0.20f);
+        shapes.circle(getCenterX(), baseY + 4f, bounds.width * 0.44f, 24);
+    }
+
+    private Color getGlowColor() {
+        return switch (type) {
+            case OXYGEN -> new Color(0.12f, 0.90f, 1f, 1f);
+            case FOOD -> new Color(1f, 0.78f, 0.22f, 1f);
+            case ICE_ROCK -> new Color(0.54f, 0.88f, 1f, 1f);
+            case MEDKIT -> new Color(0.30f, 1f, 0.54f, 1f);
+            default -> new Color(0.22f, 0.96f, 1f, 1f);
+        };
     }
 
     public boolean overlaps(

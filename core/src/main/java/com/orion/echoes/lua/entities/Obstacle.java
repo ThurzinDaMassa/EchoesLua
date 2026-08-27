@@ -1,5 +1,6 @@
 package com.orion.echoes.lua.entities;
 
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Rectangle;
@@ -28,6 +29,17 @@ public class Obstacle {
         GameAssets assets
     ) {
 
+        this(x, y, width, height, assets.getObstacle());
+    }
+
+    public Obstacle(
+        float x,
+        float y,
+        float width,
+        float height,
+        Texture texture
+    ) {
+
         this.x = x;
         this.y = y;
 
@@ -36,7 +48,7 @@ public class Obstacle {
 
         sprite =
             new Sprite(
-                assets.getObstacle()
+                texture
             );
 
         sprite.setPosition(

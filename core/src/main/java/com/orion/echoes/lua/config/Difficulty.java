@@ -1,9 +1,9 @@
 package com.orion.echoes.lua.config;
 
 public enum Difficulty {
-    EXPLORER("EXPLORADOR", 0.72f, 2, 2, 0.85f),
-    STANDARD("PADRAO", 1f, 3, 3, 1f),
-    SURVIVOR("SOBREVIVENTE", 1.35f, 4, 4, 1.35f);
+    EXPLORER("FACIL", 0.72f, 2, 2, 0.85f),
+    STANDARD("MEDIO", 1f, 3, 3, 1f),
+    SURVIVOR("DIFICIL", 1.35f, 4, 4, 1.35f);
 
     private final String label;
     private final float oxygenConsumptionMultiplier;

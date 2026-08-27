@@ -15,12 +15,29 @@ Os seguintes assets foram criados especificamente para os sistemas do Desafio 02
 | `textures/eva_weapon.png` | Arma completa renderizada no astronauta |
 | `textures/energy_projectile.png` | Projetil direcional com efeitos |
 | `textures/medkit.png` | Kit medico que recupera a vida |
-| `textures/astronaut_*_actions.png` | Cinco estados visuais dos quatro astronautas |
-| `ui/echoes_app_icon.png` | Simbolo do aplicativo e fonte dos icones Windows |
+| `textures/astronaut_*_locomotion.png` | Doze quadros por astronauta: quatro idle, quatro caminhada e quatro corrida |
+| `ui/echoes_app_icon_v2.png` | Simbolo simplificado do aplicativo e fonte dos icones Windows |
+| `textures/lunar_surface.png` | Terreno lunar detalhado e repetivel |
+| `textures/lunar_surface_v2.png` | Regolito lunar claro com microcrateras e leitura melhor dos itens |
+| `textures/base_interior.png` | Ambiente jogavel pressurizado da base lunar |
+| `textures/crafting_workbench.png` | Bancada interativa de fabricacao e processamento |
 | `textures/repair_station.png` | Comunicacao, energia, extracao e estufa |
 | `textures/mars_base.png` | Complexo principal da Base Ares |
-| `textures/mars_research_site.png` | Tres sistemas interativos de Marte |
+| `textures/mars_research_site.png` | Asset legado dos antigos pontos de pesquisa de Marte |
 | `textures/mars_surface.png` | Terreno continuo da fase marciana |
+| `textures/mars_rock_sedimentary.png` | Formacao marciana baixa de rochas sedimentares |
+| `textures/mars_rock_basalt.png` | Formacao vulcanica marciana alta de basalto |
+| `textures/mars_rock_ironstone.png` | Campo marciano de pedras arredondadas ricas em ferro |
+| `textures/mars_oxygen_pickup.png` | Cartucho de oxigenio exclusivo de Marte |
+| `textures/mars_food_ration.png` | Racao selada exclusiva da Base Ares |
+| `textures/mars_medkit.png` | Kit medico marciano de alta visibilidade |
+| `textures/mars_ice_sample.png` | Amostra mineral marciana com veios de gelo |
+| `textures/enemy_mars_skimmer.png` | Drone planador hostil exclusivo de Marte |
+| `textures/repair_station_broken.png` | Estado quebrado das quatro estacoes lunares |
+| `textures/mars_satellite_broken.png` | Estado danificado dos quatro satelites marcianos |
+| `textures/mars_satellite_repaired.png` | Estado operacional dos satelites marcianos |
+| `ui/mission_protocol_intro.png` | Abertura cinematografica fotorrealista do protocolo lunar |
+| `sounds/player_damage.wav` | Impacto de dano no traje do astronauta |
 
 Os sprites usam fundo transparente. Cada item importante possui silhueta,
 material e leitura visual proprios, sem depender de simples trocas de cor.

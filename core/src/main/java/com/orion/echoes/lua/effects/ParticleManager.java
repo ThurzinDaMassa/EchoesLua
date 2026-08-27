@@ -35,15 +35,26 @@ public class ParticleManager {
         boolean lowOxygen,
         Portal portal
     ) {
+        update(delta, player, insideBase, lowOxygen, portal, true);
+    }
+
+    public void update(
+        float delta,
+        Player player,
+        boolean insideBase,
+        boolean lowOxygen,
+        Portal portal,
+        boolean movementDust
+    ) {
 
         dustTimer -= delta;
         rechargeTimer -= delta;
         lowOxygenTimer -= delta;
         portalTimer -= delta;
 
-        if (player.isMoving() && dustTimer <= 0f) {
+        if (movementDust && player.isMoving() && dustTimer <= 0f) {
             emitDust(player);
-            dustTimer = 0.035f;
+            dustTimer = 0.08f;
         }
 
         if (insideBase && rechargeTimer <= 0f) {
@@ -79,20 +90,20 @@ public class ParticleManager {
         float baseX = player.getBottomCenterX();
         float baseY = player.getBottomCenterY() + 4f;
 
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 2; i++) {
 
             float dirX =
                 -player.getDirectionX() * 16f;
 
             particles.add(
                 new Particle(
-                    baseX + MathUtils.random(-12f, 12f),
-                    baseY + MathUtils.random(-2f, 3f),
-                    dirX + MathUtils.random(-18f, 18f),
-                    MathUtils.random(15f, 35f),
-                    MathUtils.random(0.40f, 0.70f),
-                    MathUtils.random(3f, 5f),
-                    MathUtils.random(8f, 12f),
+                    baseX + MathUtils.random(-8f, 8f),
+                    baseY + MathUtils.random(-2f, 1f),
+                    dirX + MathUtils.random(-10f, 10f),
+                    MathUtils.random(4f, 14f),
+                    MathUtils.random(0.25f, 0.42f),
+                    MathUtils.random(2f, 3.5f),
+                    MathUtils.random(4f, 7f),
                     new Color(
                         0.78f,
                         0.78f,
@@ -256,6 +267,31 @@ public class ParticleManager {
                     )
                 )
             );
+        }
+    }
+
+    public void emitRepairSparks(float x, float y, boolean mars) {
+        Color hot = mars ? new Color(1f, 0.38f, 0.10f, 1f)
+            : new Color(0.14f, 0.88f, 1f, 1f);
+        for (int i = 0; i < 7; i++) {
+            float angle = MathUtils.random(18f, 162f);
+            float speed = MathUtils.random(55f, 145f);
+            particles.add(new Particle(
+                x + MathUtils.random(-14f, 14f), y + MathUtils.random(-8f, 12f),
+                MathUtils.cosDeg(angle) * speed, MathUtils.sinDeg(angle) * speed,
+                MathUtils.random(0.18f, 0.38f), MathUtils.random(2f, 4.5f), 0.8f,
+                MathUtils.randomBoolean(0.28f) ? Color.WHITE : hot));
+        }
+    }
+
+    public void emitDamageBurst(float x, float y) {
+        for (int i = 0; i < 18; i++) {
+            float angle = MathUtils.random(0f, 360f);
+            float speed = MathUtils.random(45f, 130f);
+            particles.add(new Particle(x, y,
+                MathUtils.cosDeg(angle) * speed, MathUtils.sinDeg(angle) * speed,
+                MathUtils.random(0.22f, 0.46f), MathUtils.random(3f, 6f), 1f,
+                i % 3 == 0 ? Color.WHITE : new Color(1f, 0.12f, 0.08f, 1f)));
         }
     }
 

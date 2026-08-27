@@ -2,6 +2,7 @@ package com.orion.echoes.lua.progress;
 
 import java.util.EnumMap;
 import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 
 import com.orion.echoes.lua.enums.ItemType;
 import com.orion.echoes.lua.enums.RepairType;
@@ -9,15 +10,20 @@ import com.orion.echoes.lua.utils.GameConstants;
 
 /** Estado central compartilhado entre a Lua, o HUD e Marte. */
 public class MissionState {
+    public static final int LUNAR_ENEMY_TARGET = 4;
+    public static final int MARS_SATELLITE_TARGET = 4;
+
     private final Map<ItemType, Integer> inventory = new EnumMap<>(ItemType.class);
     private final Map<RepairType, Boolean> repairs = new EnumMap<>(RepairType.class);
 
     private boolean weaponCrafted;
     private int enemiesDefeated;
-    private final boolean[] marsSites = new boolean[3];
+    private long worldSeed;
+    private final boolean[] marsSites = new boolean[MARS_SATELLITE_TARGET];
     private String lastMessage = "Localize as pecas da colonia";
 
     public MissionState() {
+        worldSeed = ThreadLocalRandom.current().nextLong();
         for (ItemType type : ItemType.values()) {
             inventory.put(type, 0);
         }
@@ -27,9 +33,8 @@ public class MissionState {
     }
 
     public void collect(ItemType type) {
-        if (!isMissionPart(type)) return;
         inventory.put(type, getCount(type) + 1);
-        lastMessage = "Peca coletada: " + getItemLabel(type);
+        lastMessage = "Item coletado: " + getItemLabel(type);
     }
 
     public int getCount(ItemType type) {
@@ -114,8 +119,12 @@ public class MissionState {
     public boolean scanMarsSite(int index) {
         if (index < 0 || index >= marsSites.length || marsSites[index]) return false;
         marsSites[index] = true;
-        lastMessage = "Dados marcianos sincronizados";
+        lastMessage = "Satelite marciano restaurado";
         return true;
+    }
+
+    public boolean repairMarsSatellite(int index) {
+        return scanMarsSite(index);
     }
 
     public boolean isMarsSiteScanned(int index) {
@@ -128,10 +137,14 @@ public class MissionState {
         return count;
     }
 
+    public int getMarsSatellitesRepaired() {
+        return getMarsSitesScanned();
+    }
+
     public boolean isPortalReady(float oxygen) {
         return getRepairCount() >= 4
             && weaponCrafted
-            && enemiesDefeated >= 1
+            && enemiesDefeated >= LUNAR_ENEMY_TARGET
             && oxygen > GameConstants.CRITICAL_OXYGEN_THRESHOLD;
     }
 
@@ -142,7 +155,7 @@ public class MissionState {
     public int getLunarStage() {
         if (getRepairCount() < 4) return 1;
         if (!weaponCrafted) return 2;
-        if (enemiesDefeated < 1) return 3;
+        if (enemiesDefeated < LUNAR_ENEMY_TARGET) return 3;
         return 4;
     }
 
@@ -161,11 +174,12 @@ public class MissionState {
         }
         if (!weaponCrafted) {
             return canCraftWeapon()
-                ? "Partes completas // volte a base e pressione C"
+                ? "Partes completas // entre na base e use a bancada"
                 : "Colete as pecas A, B e C (" + getWeaponPartCount() + "/3)";
         }
-        if (enemiesDefeated < 1) {
-            return "Mire com o mouse e segure o clique para disparar";
+        if (enemiesDefeated < LUNAR_ENEMY_TARGET) {
+            return "Elimine todas as ameacas lunares (" + enemiesDefeated
+                + "/" + LUNAR_ENEMY_TARGET + ")";
         }
         if (oxygen <= GameConstants.CRITICAL_OXYGEN_THRESHOLD) {
             return "Oxigenio baixo // recarregue dentro da base";
@@ -211,6 +225,14 @@ public class MissionState {
         enemiesDefeated = Math.max(0, count);
     }
 
+    public long getWorldSeed() {
+        return worldSeed;
+    }
+
+    void restoreWorldSeed(long seed) {
+        worldSeed = seed;
+    }
+
     void restoreMarsSite(int index, boolean scanned) {
         if (index >= 0 && index < marsSites.length) marsSites[index] = scanned;
     }
@@ -222,6 +244,10 @@ public class MissionState {
         return true;
     }
 
+    public boolean consumeItem(ItemType type, int amount) {
+        return consume(type, amount);
+    }
+
     public static boolean isMissionPart(ItemType type) {
         return type != ItemType.OXYGEN && type != ItemType.FOOD
             && type != ItemType.ICE_ROCK && type != ItemType.MEDKIT;
@@ -229,6 +255,9 @@ public class MissionState {
 
     public static String getItemLabel(ItemType type) {
         return switch (type) {
+            case OXYGEN -> "oxigenio";
+            case FOOD -> "alimento";
+            case ICE_ROCK -> "gelo lunar";
             case ANTENNA_PART -> "antena";
             case ENERGY_PART -> "energia";
             case EXTRACTION_PART -> "extracao";
@@ -237,7 +266,6 @@ public class MissionState {
             case WEAPON_PART_B -> "arma B";
             case WEAPON_PART_C -> "arma C";
             case MEDKIT -> "kit medico";
-            default -> type.name();
         };
     }
 }

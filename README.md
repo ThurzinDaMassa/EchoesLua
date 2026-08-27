@@ -7,18 +7,19 @@ energia, recupere a colonia e atravesse o portal para a Base de Marte.
 ## Gameplay
 
 - Explore um mapa lunar com obstaculos, recursos, particulas e audio.
-- Escolha Triple T, Winston, Shrek ou Neon antes da missao; cada astronauta
-  possui estados visuais de repouso, caminhada, corrida, tiro e fabricacao.
+- Escolha Triple T, Winston, Shrek ou Neon antes da missao. Cada astronauta
+  possui ciclos de quatro quadros para idle, caminhada e corrida, alem de
+  resposta visual de recuo ao disparar e movimento durante a fabricacao.
 - Colete oxigenio, alimento e gelo.
 - Preserve a saude em combate e colete kits medicos para recuperar HP; o
   oxigenio e consumido apenas pelo ambiente.
-- Volte para a base para recarregar O2 e transformar gelo em agua e H2.
+- Entre na base para recarregar O2 e usar a bancada de fabricacao.
 - Use corrida com cuidado: ela aumenta a velocidade, mas consome energia.
 - Encontre pecas e repare comunicacao, energia, extracao e estufa.
 - Colete tres componentes, fabrique a arma EVA, mire livremente com o mouse e
   dispare projeteis de energia contra as ameacas hostis.
 - Cumpra o protocolo lunar para liberar o portal e seguir para Marte sem perder progresso.
-- Escolha entre Explorador, Padrao e Sobrevivente. Cada modo altera consumo de
+- Escolha diretamente no menu entre Facil, Medio e Dificil. Cada modo altera consumo de
   oxigenio, objetivos e multiplicador de pontos.
 
 As configuracoes de dificuldade, volume, mute e tela cheia, assim como os
@@ -32,9 +33,8 @@ arma, inimigos eliminados, itens coletados e a fase atual.
 | --- | --- |
 | `WASD` ou setas | Movimento |
 | `Shift` | Correr enquanto houver energia |
-| `E` | Processar gelo dentro da base |
-| `E` | Reparar uma estacao quando estiver proximo dela |
-| `C` | Fabricar a arma na base depois de coletar as 3 partes |
+| `E` | Entrar/sair da base, interagir e usar a bancada |
+| `E` | Iniciar o reparo de 3 segundos em uma estacao ou satelite proximo |
 | `Mouse` | Mirar a arma EVA |
 | `Clique esquerdo` ou `Espaco` | Disparar; segure para fogo continuo |
 | `L` | Continuar o ultimo autosave a partir do menu |
@@ -45,19 +45,20 @@ arma, inimigos eliminados, itens coletados e a fase atual.
 | `1` a `4` no menu | Escolher o astronauta |
 | `Delete` no menu | Apagar o autosave atual |
 
-No menu, pressione `O` para abrir as opcoes. Dentro delas, use esquerda/direita
-para a dificuldade, cima/baixo para o volume, `M` para mute e `F` para tela cheia.
+No menu principal, clique em `FACIL`, `MEDIO` ou `DIFICIL` antes de iniciar.
+Pressione `O` para abrir volume, audio e exibicao; dentro das opcoes, use
+cima/baixo para o volume, `M` para mute e `F` para tela cheia.
 
 ## Requisitos do portal
 
 O portal e liberado quando o astronauta conclui os quatro reparos,
-fabrica a arma, elimina uma ameaca e mantem o oxigenio acima do nivel critico.
+fabrica a arma, elimina as quatro ameacas e mantem o oxigenio acima do nivel critico.
 O HUD organiza o protocolo em quatro etapas numeradas e mostra a acao exata do
 passo atual, junto do resumo de sistemas, arma, hostis e portal.
 
 Em Marte, a Base Ares recarrega O2 como a base lunar. A fase possui obstaculos,
 recursos, kits medicos, inimigos, arma, projeteis, particulas, som ambiente e
-tres pontos de pesquisa para sincronizar.
+quatro satelites danificados que levam tres segundos para serem restaurados.
 
 ## Estrutura
 

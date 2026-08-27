@@ -50,6 +50,7 @@ public class AudioManager {
     private Sound weaponFireSound;
     private Sound enemyHitSound;
     private Sound medkitSound;
+    private Sound playerDamageSound;
 
     // =========================================================
     // VOLUME
@@ -206,6 +207,7 @@ public class AudioManager {
         weaponFireSound = loadSound(SoundPaths.WEAPON_FIRE);
         enemyHitSound = loadSound(SoundPaths.ENEMY_HIT);
         medkitSound = loadSound(SoundPaths.MEDKIT_PICKUP);
+        playerDamageSound = loadSound(SoundPaths.PLAYER_DAMAGE);
 
         configureMusic();
     }
@@ -555,6 +557,10 @@ public class AudioManager {
         playVaried(enemyHitSound, 0.62f, 0.92f, 1.08f);
     }
 
+    public void playPlayerDamage() {
+        playVaried(playerDamageSound, 0.86f, 0.94f, 1.03f);
+    }
+
     public void playMarsAmbient() {
         stopAmbientMusic();
         if (!marsAmbientMusic.isPlaying()) marsAmbientMusic.play();
@@ -866,6 +872,7 @@ public class AudioManager {
         disposeSound(weaponFireSound);
         disposeSound(enemyHitSound);
         disposeSound(medkitSound);
+        disposeSound(playerDamageSound);
     }
 
     private void disposeSound(

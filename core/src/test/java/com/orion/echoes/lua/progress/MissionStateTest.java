@@ -24,6 +24,10 @@ class MissionStateTest {
         state.collect(ItemType.WEAPON_PART_B);
         state.collect(ItemType.WEAPON_PART_C);
         assertTrue(state.craftWeapon());
+        for (int i = 0; i < MissionState.LUNAR_ENEMY_TARGET - 1; i++) {
+            state.recordEnemyDefeated();
+        }
+        assertFalse(state.isPortalReady(50f));
         state.recordEnemyDefeated();
 
         assertTrue(state.isPortalReady(50f));
@@ -45,7 +49,7 @@ class MissionStateTest {
     }
 
     @Test
-    void tracksIndependentMarsResearchSites() {
+    void tracksIndependentMarsSatellites() {
         MissionState state = new MissionState();
         assertTrue(state.scanMarsSite(2));
         assertFalse(state.scanMarsSite(2));
@@ -53,6 +57,16 @@ class MissionStateTest {
         assertEquals(2, state.getMarsSitesScanned());
         assertTrue(state.isMarsSiteScanned(0));
         assertFalse(state.isMarsSiteScanned(1));
+    }
+
+    @Test
+    void requiresAllFourMarsSatellites() {
+        MissionState state = new MissionState();
+        for (int i = 0; i < MissionState.MARS_SATELLITE_TARGET; i++) {
+            assertTrue(state.repairMarsSatellite(i));
+        }
+        assertEquals(4, state.getMarsSatellitesRepaired());
+        assertTrue(state.isMarsSiteScanned(3));
     }
 
     @Test
@@ -73,5 +87,19 @@ class MissionStateTest {
         state.collect(ItemType.ANTENNA_PART);
         assertTrue(state.repair(RepairType.COMMUNICATION));
         assertEquals(ItemType.ENERGY_PART, state.getRequestedItem());
+    }
+
+    @Test
+    void inventoryTracksEveryCollectedItem() {
+        MissionState state = new MissionState();
+        state.collect(ItemType.OXYGEN);
+        state.collect(ItemType.OXYGEN);
+        state.collect(ItemType.MEDKIT);
+        state.collect(ItemType.ICE_ROCK);
+        assertEquals(2, state.getCount(ItemType.OXYGEN));
+        assertEquals(1, state.getCount(ItemType.MEDKIT));
+        assertEquals(1, state.getCount(ItemType.ICE_ROCK));
+        assertTrue(state.consumeItem(ItemType.ICE_ROCK, 1));
+        assertEquals(0, state.getCount(ItemType.ICE_ROCK));
     }
 }

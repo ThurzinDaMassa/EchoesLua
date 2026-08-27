@@ -15,6 +15,7 @@ public final class SoundPaths {
     public static final String WEAPON_FIRE = "sounds/weapon_fire.wav";
     public static final String ENEMY_HIT = "sounds/enemy_hit.wav";
     public static final String MEDKIT_PICKUP = "sounds/medkit_pickup.wav";
+    public static final String PLAYER_DAMAGE = "sounds/player_damage.wav";
 
     // =========================================================
     // COLETA

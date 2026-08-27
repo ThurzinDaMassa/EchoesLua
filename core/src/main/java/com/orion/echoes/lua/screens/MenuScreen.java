@@ -37,6 +37,11 @@ public class MenuScreen extends ScreenAdapter {
     private final Rectangle instructionsButton = new Rectangle(86f, 222f, 420f, 58f);
     private final Rectangle optionsButton = new Rectangle(86f, 150f, 420f, 58f);
     private final Rectangle exitButton = new Rectangle(86f, 78f, 420f, 58f);
+    private final Rectangle[] difficultyButtons = {
+        new Rectangle(86f, 365f, 128f, 42f),
+        new Rectangle(225f, 365f, 128f, 42f),
+        new Rectangle(364f, 365f, 142f, 42f)
+    };
     private final float[] starX = new float[STAR_COUNT];
     private final float[] starY = new float[STAR_COUNT];
     private final float[] starSize = new float[STAR_COUNT];
@@ -172,6 +177,13 @@ public class MenuScreen extends ScreenAdapter {
         }
         if (!Gdx.input.justTouched()) return;
 
+        int difficultyChoice = difficultyAt(mouse);
+        if (difficultyChoice >= 0) {
+            game.getSettings().setDifficulty(Difficulty.values()[difficultyChoice]);
+            game.getAudio().playMenuClick();
+            return;
+        }
+
         switch (buttonAt(mouse)) {
             case 0 -> startGame();
             case 1 -> {
@@ -185,6 +197,13 @@ public class MenuScreen extends ScreenAdapter {
             case 3 -> Gdx.app.exit();
             default -> { }
         }
+    }
+
+    private int difficultyAt(Vector2 point) {
+        for (int i = 0; i < difficultyButtons.length; i++) {
+            if (difficultyButtons[i].contains(point)) return i;
+        }
+        return -1;
     }
 
     private void handleOptionsInput() {
@@ -246,6 +265,12 @@ public class MenuScreen extends ScreenAdapter {
                 game.getProgress().getSavedCollectedItems(),
                 game.getProgress().getSavedPlayerX(1120f),
                 game.getProgress().getSavedPlayerY(620f)));
+        } else if ("BASE".equals(game.getProgress().getSavedScene())) {
+            game.changeScreen(new BaseInteriorScreen(game, mission, status,
+                game.getProgress().getSavedMissionTime(),
+                game.getProgress().getSavedCollectedItems(),
+                game.getProgress().getSavedPlayerX(598f),
+                game.getProgress().getSavedPlayerY(122f)));
         } else {
             game.changeScreen(new LunarScreen(game, mission, status,
                 game.getProgress().getSavedMissionTime()));
@@ -308,6 +333,17 @@ public class MenuScreen extends ScreenAdapter {
         drawButton(instructionsButton, 1, false);
         drawButton(optionsButton, 2, false);
         drawButton(exitButton, 3, false);
+        for (int i = 0; i < difficultyButtons.length; i++) {
+            Rectangle button = difficultyButtons[i];
+            boolean selected = game.getSettings().getDifficulty().ordinal() == i;
+            boolean hover = button.contains(mouse);
+            shapes.setColor(selected ? new Color(0.025f, 0.18f, 0.23f, 0.98f)
+                : hover ? UiTheme.PANEL_LIGHT : UiTheme.PANEL_SOLID);
+            shapes.rect(button.x, button.y, button.width, button.height);
+            shapes.setColor(selected ? UiTheme.CYAN : UiTheme.BORDER);
+            shapes.rect(button.x, button.y, 3f, button.height);
+            shapes.rect(button.x, button.y + button.height - 1f, button.width, 1f);
+        }
         shapes.end();
         disableBlend();
     }
@@ -342,6 +378,17 @@ public class MenuScreen extends ScreenAdapter {
         fonts.body.draw(batch,
             "Repare a colonia. Fabrique a arma.\nAtravesse o portal rumo a Marte.",
             86f, 447f, 410f, Align.left, true);
+
+        set(fonts.micro, UiTheme.CYAN_SOFT);
+        fonts.micro.draw(batch, "ESCOLHA A DIFICULDADE", 86f, 418f);
+        Difficulty[] levels = Difficulty.values();
+        for (int i = 0; i < levels.length; i++) {
+            Rectangle button = difficultyButtons[i];
+            set(fonts.label, game.getSettings().getDifficulty() == levels[i]
+                ? UiTheme.CYAN : UiTheme.TEXT);
+            fonts.label.draw(batch, levels[i].getLabel(), button.x, button.y + 27f,
+                button.width, Align.center, false);
+        }
 
         buttonText("INICIAR MISSAO", "01", playButton);
         buttonText("PROTOCOLO EVA", "02", instructionsButton);
@@ -379,8 +426,8 @@ public class MenuScreen extends ScreenAdapter {
         batch.begin();
         instructionRow("WASD / SETAS", "MOVIMENTO", 451f);
         instructionRow("SHIFT", "CORRER // CONSOME ENERGIA", 403f);
-        instructionRow("E", "REPARAR / PROCESSAR GELO", 355f);
-        instructionRow("C", "FABRICAR ARMA NA BASE", 307f);
+        instructionRow("E", "INTERAGIR / ENTRAR NA BASE / USAR BANCADA", 355f);
+        instructionRow("M", "ABRIR MENU E GERENCIAR O SAVE", 307f);
         instructionRow("MOUSE / CLIQUE", "MIRAR / DISPARAR A ARMA", 259f);
         set(fonts.label, UiTheme.CYAN);
         fonts.label.draw(batch, "OBJETIVO", 356f, 207f);

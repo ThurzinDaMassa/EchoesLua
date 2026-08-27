@@ -95,9 +95,10 @@ public class CollectionSystem {
                 break;
 
             default:
-                missionState.collect(type);
                 break;
         }
+
+        missionState.collect(type);
 
         item.collect();
 

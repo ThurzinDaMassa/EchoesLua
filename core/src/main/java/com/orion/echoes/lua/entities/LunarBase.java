@@ -21,6 +21,8 @@ public class LunarBase {
 
     private final Rectangle bounds;
 
+    private final Rectangle entranceBounds;
+
     private final Sprite sprite;
 
     public LunarBase(
@@ -67,6 +69,13 @@ public class LunarBase {
                 width * 0.76f,
                 height * 0.72f
             );
+
+        entranceBounds = new Rectangle(
+            x + width * 0.35f,
+            y - 34f,
+            width * 0.30f,
+            height * 0.40f
+        );
     }
 
     public void update(
@@ -134,6 +143,18 @@ public class LunarBase {
 
     public Rectangle getBounds() {
         return bounds;
+    }
+
+    public boolean isPlayerNearEntrance(Player player) {
+        return entranceBounds.overlaps(player.getBounds());
+    }
+
+    public float getEntranceX() {
+        return x + width / 2f;
+    }
+
+    public float getEntranceY() {
+        return y;
     }
 
     public float getCenterX() {

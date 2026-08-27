@@ -1,6 +1,7 @@
 package com.orion.echoes.lua.entities;
 
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
@@ -19,10 +20,14 @@ public class Enemy {
     private float time;
 
     public Enemy(float x, float y, GameAssets assets) {
+        this(x, y, assets.getEnemySentinel());
+    }
+
+    public Enemy(float x, float y, Texture texture) {
         position = new Vector2(x, y);
         patrolOriginX = x;
         bounds = new Rectangle(x, y, SIZE, SIZE);
-        sprite = new Sprite(assets.getEnemySentinel());
+        sprite = new Sprite(texture);
         sprite.setSize(112f, 105f);
         sprite.setOriginCenter();
         updateSprite();

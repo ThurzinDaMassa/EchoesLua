@@ -62,7 +62,8 @@ public class GameProgress {
         preferences.putInteger("save.fuel", status.getFuel());
         preferences.putBoolean("save.weapon", mission.hasWeapon());
         preferences.putInteger("save.kills", mission.getEnemiesDefeated());
-        for (int i = 0; i < 3; i++) {
+        preferences.putLong("save.worldSeed", mission.getWorldSeed());
+        for (int i = 0; i < MissionState.MARS_SATELLITE_TARGET; i++) {
             preferences.putBoolean("save.marsSite." + i, mission.isMarsSiteScanned(i));
         }
         for (ItemType type : ItemType.values()) {
@@ -100,7 +101,8 @@ public class GameProgress {
         }
         mission.restoreWeapon(preferences.getBoolean("save.weapon", false));
         mission.restoreEnemiesDefeated(preferences.getInteger("save.kills", 0));
-        for (int i = 0; i < 3; i++) {
+        mission.restoreWorldSeed(preferences.getLong("save.worldSeed", mission.getWorldSeed()));
+        for (int i = 0; i < MissionState.MARS_SATELLITE_TARGET; i++) {
             mission.restoreMarsSite(i, preferences.getBoolean("save.marsSite." + i, false));
         }
         return mission;

@@ -11,6 +11,7 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.math.RandomXS128;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Align;
@@ -21,6 +22,7 @@ import com.orion.echoes.lua.entities.Player;
 import com.orion.echoes.lua.entities.Enemy;
 import com.orion.echoes.lua.entities.Obstacle;
 import com.orion.echoes.lua.entities.CollectibleItem;
+import com.orion.echoes.lua.entities.MarsSatellite;
 import com.orion.echoes.lua.enums.ItemType;
 import com.orion.echoes.lua.effects.ParticleManager;
 import com.orion.echoes.lua.progress.MissionState;
@@ -52,12 +54,12 @@ public class MarsScreen extends ScreenAdapter {
     private UiFonts fonts;
     private Texture surfaceTexture;
     private Texture marsBaseTexture;
-    private Texture researchSiteTexture;
     private float time;
     private boolean changingScreen;
     private float autosaveTimer;
-    private Rectangle[] researchSites;
-    private int nearbySite = -1;
+    private Array<MarsSatellite> satellites;
+    private MarsSatellite nearbySatellite;
+    private MarsSatellite activeRepairSatellite;
     private Rectangle marsBaseBounds;
     private float completionTimer = -1f;
     private Array<Obstacle> obstacles;
@@ -68,9 +70,12 @@ public class MarsScreen extends ScreenAdapter {
     private CollectionSystem collection;
     private ObstacleSystem obstacleSystem;
     private final Vector2 aimWorld = new Vector2();
+    private boolean inventoryOpen;
+    private float repairSparkTimer;
+    private float damageFlashTimer;
 
     private static final String[] SITE_NAMES = {
-        "COMUNICACOES ARES", "REATOR SUBTERRANEO", "LABORATORIO DE SOLO"
+        "HERMES", "DEIMOS", "PHOBOS", "ARES RELAY"
     };
 
     public MarsScreen(LunarEchoesGame game, MissionState mission, PlayerStatus status,
@@ -101,18 +106,19 @@ public class MarsScreen extends ScreenAdapter {
         player = new Player(startX, startY, game.getAssets(), game.getSettings().getAstronautType());
         surfaceTexture = game.getAssets().getMarsSurface();
         marsBaseTexture = game.getAssets().getMarsBase();
-        researchSiteTexture = game.getAssets().getMarsResearchSite();
-        researchSites = new Rectangle[] {
-            new Rectangle(520f, 1050f, 118f, 92f),
-            new Rectangle(2260f, 1030f, 118f, 92f),
-            new Rectangle(2070f, 300f, 118f, 92f)
-        };
+        satellites = new Array<>();
+        satellites.add(new MarsSatellite(0, 520f, 1050f, game.getAssets()));
+        satellites.add(new MarsSatellite(1, 2260f, 1030f, game.getAssets()));
+        satellites.add(new MarsSatellite(2, 2070f, 300f, game.getAssets()));
+        satellites.add(new MarsSatellite(3, 2920f, 1450f, game.getAssets()));
         marsBaseBounds = new Rectangle(900f, 500f, 460f, 240f);
         createMarsGameplay();
         if ("MARTE".equals(game.getProgress().getSavedScene())) {
             game.getProgress().restoreWorld(items, enemies);
         }
-        if (mission.getMarsSitesScanned() == 3) completionTimer = 1.25f;
+        if (mission.getMarsSatellitesRepaired() == MissionState.MARS_SATELLITE_TARGET) {
+            completionTimer = 1.25f;
+        }
         positionCamera();
         game.getAudio().playMarsAmbient();
     }
@@ -126,15 +132,25 @@ public class MarsScreen extends ScreenAdapter {
         player.update(safeDelta, status);
         aimWorld.set(Gdx.input.getX(), Gdx.input.getY());
         viewport.unproject(aimWorld);
-        if (mission.hasWeapon()) player.setFacingTowards(aimWorld.x);
+        boolean firing = Gdx.input.isButtonPressed(Input.Buttons.LEFT)
+            || Gdx.input.isKeyPressed(Input.Keys.SPACE);
+        if (mission.hasWeapon() && (firing || !player.isMoving())) {
+            player.setFacingTowards(aimWorld.x);
+        }
         obstacleSystem.handleCollisions(player, obstacles, game.getAudio());
         for (CollectibleItem item : items) item.update(safeDelta);
         collection.update(player, status, items, particles, game.getAudio(), mission);
-        combat.update(safeDelta, player, status, mission, enemies, particles,
+        boolean playerDamaged = combat.update(safeDelta, player, status, mission, enemies, particles,
             game.getAudio(), aimWorld.x, aimWorld.y,
-            Gdx.input.isButtonPressed(Input.Buttons.LEFT)
-                || Gdx.input.isKeyPressed(Input.Keys.SPACE));
-        updateResearchSites();
+            firing);
+        if (playerDamaged) {
+            damageFlashTimer = 0.46f;
+            player.triggerDamageFlash();
+            particles.emitDamageBurst(player.getCenterX(), player.getCenterY());
+            game.getAudio().playPlayerDamage();
+        }
+        damageFlashTimer = Math.max(0f, damageFlashTimer - safeDelta);
+        updateSatellites(safeDelta);
         boolean insideBase = marsBaseBounds.overlaps(player.getBounds());
         if (insideBase) {
             status.addOxygen(14f * safeDelta);
@@ -169,25 +185,36 @@ public class MarsScreen extends ScreenAdapter {
 
     private void createMarsGameplay() {
         obstacles = new Array<>();
-        obstacles.add(new Obstacle(380f, 410f, 180f, 135f, game.getAssets()));
-        obstacles.add(new Obstacle(620f, 820f, 150f, 120f, game.getAssets()));
-        obstacles.add(new Obstacle(1510f, 420f, 190f, 145f, game.getAssets()));
-        obstacles.add(new Obstacle(1750f, 920f, 145f, 115f, game.getAssets()));
-        obstacles.add(new Obstacle(2420f, 620f, 205f, 150f, game.getAssets()));
-        obstacles.add(new Obstacle(2740f, 1280f, 165f, 125f, game.getAssets()));
+        obstacles.add(new Obstacle(380f, 410f, 190f, 105f,
+            game.getAssets().getMarsRockSedimentary()));
+        obstacles.add(new Obstacle(620f, 820f, 145f, 160f,
+            game.getAssets().getMarsRockBasalt()));
+        obstacles.add(new Obstacle(1510f, 420f, 178f, 135f,
+            game.getAssets().getMarsRockIronstone()));
+        obstacles.add(new Obstacle(1750f, 920f, 155f, 118f,
+            game.getAssets().getMarsRockIronstone()));
+        obstacles.add(new Obstacle(2420f, 620f, 215f, 116f,
+            game.getAssets().getMarsRockSedimentary()));
+        obstacles.add(new Obstacle(2740f, 1280f, 150f, 168f,
+            game.getAssets().getMarsRockBasalt()));
 
         enemies = new Array<>();
-        enemies.add(new Enemy(680f, 1260f, game.getAssets()));
-        enemies.add(new Enemy(1730f, 1280f, game.getAssets()));
-        enemies.add(new Enemy(2470f, 430f, game.getAssets()));
-        enemies.add(new Enemy(2820f, 1010f, game.getAssets()));
+        enemies.add(new Enemy(680f, 1260f, game.getAssets().getEnemyMarsSkimmer()));
+        enemies.add(new Enemy(1730f, 1280f, game.getAssets().getEnemyMarsSkimmer()));
+        enemies.add(new Enemy(2470f, 430f, game.getAssets().getEnemyMarsSkimmer()));
+        enemies.add(new Enemy(2820f, 1010f, game.getAssets().getEnemyMarsSkimmer()));
 
         items = new Array<>();
-        items.add(new CollectibleItem(ItemType.OXYGEN, 430f, 980f, game.getAssets()));
-        items.add(new CollectibleItem(ItemType.FOOD, 1560f, 1070f, game.getAssets()));
-        items.add(new CollectibleItem(ItemType.MEDKIT, 2220f, 780f, game.getAssets()));
-        items.add(new CollectibleItem(ItemType.MEDKIT, 2860f, 460f, game.getAssets()));
-        items.add(new CollectibleItem(ItemType.ICE_ROCK, 2580f, 1420f, game.getAssets()));
+        RandomXS128 random = new RandomXS128(mission.getWorldSeed() ^ 0x4D415253L);
+        ItemType[] marsItems = {
+            ItemType.OXYGEN, ItemType.FOOD, ItemType.MEDKIT,
+            ItemType.MEDKIT, ItemType.ICE_ROCK
+        };
+        for (int i = 0; i < marsItems.length; i++) {
+            Vector2 spawn = findSafeMarsSpawn(random, i);
+            items.add(new CollectibleItem(marsItems[i], spawn.x, spawn.y,
+                game.getAssets(), true));
+        }
 
         particles = new ParticleManager();
         combat = new CombatSystem(game.getAssets(), game.getSettings().getDifficulty());
@@ -196,6 +223,9 @@ public class MarsScreen extends ScreenAdapter {
     }
 
     private void handleInput() {
+        if (Gdx.input.isKeyJustPressed(Input.Keys.I)) {
+            inventoryOpen = !inventoryOpen;
+        }
         if (Gdx.input.isKeyJustPressed(Input.Keys.M) || Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
             changingScreen = true;
             game.getAudio().stopGameplayAudio();
@@ -207,20 +237,89 @@ public class MarsScreen extends ScreenAdapter {
         }
     }
 
-    private void updateResearchSites() {
-        nearbySite = -1;
-        for (int i = 0; i < researchSites.length; i++) {
-            Rectangle area = new Rectangle(researchSites[i]);
-            area.x -= 48f;
-            area.y -= 48f;
-            area.width += 96f;
-            area.height += 96f;
-            if (area.overlaps(player.getBounds())) nearbySite = i;
+    private Vector2 findSafeMarsSpawn(RandomXS128 random, int index) {
+        Rectangle candidate = new Rectangle(0f, 0f, 76f, 76f);
+        for (int attempt = 0; attempt < 240; attempt++) {
+            candidate.x = 150f + random.nextFloat() * (GameConstants.WORLD_WIDTH - 376f);
+            candidate.y = 140f + random.nextFloat() * (GameConstants.WORLD_HEIGHT - 330f);
+            if (isSafeMarsItemArea(candidate)) return new Vector2(candidate.x, candidate.y);
         }
-        if (nearbySite >= 0 && Gdx.input.isKeyJustPressed(Input.Keys.E)
-            && mission.scanMarsSite(nearbySite)) {
-            game.getAudio().playRepair();
-            if (mission.getMarsSitesScanned() == 3) completionTimer = 1.25f;
+        return new Vector2(240f + index * 180f, 260f);
+    }
+
+    private boolean isSafeMarsItemArea(Rectangle candidate) {
+        Rectangle expanded = new Rectangle(candidate);
+        expanded.x -= 54f;
+        expanded.y -= 54f;
+        expanded.width += 108f;
+        expanded.height += 108f;
+        if (expanded.overlaps(expanded(marsBaseBounds, 90f))) return false;
+        for (MarsSatellite satellite : satellites) {
+            if (expanded.overlaps(expanded(satellite.getBounds(), 80f))) return false;
+        }
+        for (Obstacle obstacle : obstacles) {
+            if (expanded.overlaps(expanded(obstacle.getBounds(), 42f))) return false;
+        }
+        for (Enemy enemy : enemies) {
+            if (expanded.overlaps(expanded(enemy.getBounds(), 90f))) return false;
+        }
+        for (CollectibleItem item : items) {
+            if (expanded.overlaps(expanded(item.getBounds(), 32f))) return false;
+        }
+        return true;
+    }
+
+    private Rectangle expanded(Rectangle source, float margin) {
+        return new Rectangle(source.x - margin, source.y - margin,
+            source.width + margin * 2f, source.height + margin * 2f);
+    }
+
+    private void updateSatellites(float delta) {
+        nearbySatellite = null;
+        for (MarsSatellite satellite : satellites) {
+            satellite.update(delta);
+            if (satellite.isPlayerNear(player)) nearbySatellite = satellite;
+        }
+
+        if (activeRepairSatellite != null) {
+            if (!activeRepairSatellite.isPlayerNear(player)) {
+                activeRepairSatellite.cancelRepair();
+                activeRepairSatellite = null;
+                mission.notifyAction("Reparo cancelado // volte ao satelite");
+                return;
+            }
+            repairSparkTimer -= delta;
+            if (repairSparkTimer <= 0f) {
+                particles.emitRepairSparks(activeRepairSatellite.getCenterX(),
+                    activeRepairSatellite.getCenterY() + 16f, true);
+                player.triggerCraftAnimation();
+                repairSparkTimer = 0.13f;
+            }
+            if (activeRepairSatellite.isRepairComplete()) {
+                MarsSatellite completed = activeRepairSatellite;
+                mission.repairMarsSatellite(completed.getIndex());
+                completed.finishRepair();
+                activeRepairSatellite = null;
+                particles.emitProcessingBurst(completed.getCenterX(), completed.getCenterY());
+                game.getAudio().playRepair();
+                if (mission.getMarsSatellitesRepaired() == MissionState.MARS_SATELLITE_TARGET) {
+                    completionTimer = 1.25f;
+                }
+            }
+            return;
+        }
+
+        if (nearbySatellite != null && Gdx.input.isKeyJustPressed(Input.Keys.E)) {
+            if (mission.isMarsSiteScanned(nearbySatellite.getIndex())) {
+                mission.notifyAction("Satelite " + SITE_NAMES[nearbySatellite.getIndex()] + " ja esta online");
+            } else {
+                activeRepairSatellite = nearbySatellite;
+                activeRepairSatellite.startRepair();
+                repairSparkTimer = 0f;
+                player.triggerCraftAnimation();
+                mission.notifyAction("Reparando satelite "
+                    + SITE_NAMES[nearbySatellite.getIndex()] + " // mantenha-se proximo");
+            }
         }
     }
 
@@ -250,14 +349,11 @@ public class MarsScreen extends ScreenAdapter {
         shapes.setColor(0.10f, 0.55f, 0.72f, 0.14f);
         shapes.circle(1130f, 620f, 94f + MathUtils.sin(time * 3f) * 4f, 36);
 
-        for (int i = 0; i < researchSites.length; i++) {
-            Rectangle site = researchSites[i];
-            boolean scanned = mission.isMarsSiteScanned(i);
-            Color accent = scanned ? UiTheme.GREEN : new Color(0.95f, 0.34f, 0.14f, 1f);
-            shapes.setColor(accent.r, accent.g, accent.b, i == nearbySite ? 0.34f : 0.16f);
-            shapes.circle(site.x + site.width / 2f, site.y + site.height / 2f,
-                i == nearbySite ? 82f : 68f, 28);
+        for (MarsSatellite satellite : satellites) {
+            satellite.renderGlow(shapes,
+                mission.isMarsSiteScanned(satellite.getIndex()), satellite == nearbySatellite);
         }
+        for (CollectibleItem item : items) item.renderGlow(shapes, false);
         shapes.end();
         Gdx.gl.glDisable(GL20.GL_BLEND);
         renderMarsStructures();
@@ -287,32 +383,31 @@ public class MarsScreen extends ScreenAdapter {
         for (CollectibleItem item : items) item.render(batch);
         for (Enemy enemy : enemies) enemy.render(batch);
         combat.render(batch);
-        for (int i = 0; i < researchSites.length; i++) {
-            Rectangle site = researchSites[i];
-            if (mission.isMarsSiteScanned(i)) {
-                batch.setColor(0.72f, 1f, 0.82f, 1f);
-            } else if (i == nearbySite) {
-                batch.setColor(1f, 0.90f, 0.72f, 1f);
-            } else {
-                batch.setColor(Color.WHITE);
-            }
-            batch.draw(researchSiteTexture, site.x - 24f, site.y - 10f, 166f, 111f);
+        for (MarsSatellite satellite : satellites) {
+            satellite.render(batch, mission.isMarsSiteScanned(satellite.getIndex()));
         }
         batch.setColor(Color.WHITE);
         batch.end();
 
+        Gdx.gl.glEnable(GL20.GL_BLEND);
+        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
         shapes.setProjectionMatrix(camera.combined);
         shapes.begin(ShapeRenderer.ShapeType.Filled);
+        for (MarsSatellite satellite : satellites) {
+            satellite.renderRepairOverlay(shapes,
+                mission.isMarsSiteScanned(satellite.getIndex()), satellite == nearbySatellite);
+        }
         for (Enemy enemy : enemies) enemy.renderStatus(shapes);
         particles.render(shapes);
         shapes.end();
+        Gdx.gl.glDisable(GL20.GL_BLEND);
     }
 
     private void renderPlayer() {
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
         player.render(batch);
-        if (mission.hasWeapon() && !player.isFiringAnimation()) player.renderWeapon(batch, aimWorld.x, aimWorld.y);
+        if (mission.hasWeapon()) player.renderWeapon(batch, aimWorld.x, aimWorld.y);
         batch.end();
     }
 
@@ -333,9 +428,20 @@ public class MarsScreen extends ScreenAdapter {
         UiTheme.bar(shapes, 1032f, 633f, 142f, 5f,
             status.getEnergy() / GameConstants.MAX_ENERGY, UiTheme.GREEN);
         UiTheme.panel(shapes, 24f, 22f, 520f, 58f, UiTheme.GREEN);
-        if (nearbySite >= 0) {
+        if (nearbySatellite != null) {
             UiTheme.panel(shapes, 562f, 22f, 388f, 58f,
-                mission.isMarsSiteScanned(nearbySite) ? UiTheme.GREEN : UiTheme.WARNING);
+                mission.isMarsSiteScanned(nearbySatellite.getIndex()) ? UiTheme.GREEN : UiTheme.WARNING);
+        }
+        UiTheme.panel(shapes, 970f, 22f, 286f, 58f,
+            inventoryOpen ? UiTheme.GREEN : marsAccent);
+        if (inventoryOpen) {
+            UiTheme.panel(shapes, 980f, 390f, 276f, 220f, marsAccent);
+            for (int i = 0; i < 4; i++) {
+                shapes.setColor(0.035f, 0.018f, 0.014f, 0.95f);
+                shapes.rect(998f, 512f - i * 40f, 240f, 34f);
+                shapes.setColor(UiTheme.BORDER);
+                shapes.rect(998f, 512f - i * 40f, 240f, 1f);
+            }
         }
         shapes.end();
 
@@ -346,12 +452,12 @@ public class MarsScreen extends ScreenAdapter {
         fonts.micro.setColor(UiTheme.MUTED);
         fonts.micro.draw(batch, "SUPERFICIE // SOL " + formatTime(time), 44f, 652f);
         fonts.label.setColor(UiTheme.TEXT);
-        fonts.label.draw(batch, mission.getMarsSitesScanned() == 3
-            ? "PROTOCOLO ARES CONCLUIDO" : "SINCRONIZE OS SISTEMAS  "
-                + mission.getMarsSitesScanned() + "/3", 344f, 674f);
+        fonts.label.draw(batch, mission.getMarsSatellitesRepaired() == MissionState.MARS_SATELLITE_TARGET
+            ? "PROTOCOLO ARES CONCLUIDO" : "REPARE OS SATELITES  "
+                + mission.getMarsSatellitesRepaired() + "/" + MissionState.MARS_SATELLITE_TARGET, 344f, 674f);
         fonts.micro.setColor(UiTheme.MUTED);
-        fonts.micro.draw(batch, mission.getMarsSitesScanned() == 3
-            ? "Transmitindo relatorio final..." : "Explore os tres pontos marcados no mapa.",
+        fonts.micro.draw(batch, mission.getMarsSatellitesRepaired() == MissionState.MARS_SATELLITE_TARGET
+            ? "Transmitindo relatorio final..." : "Repare os quatro satelites marcados no mapa.",
             344f, 652f);
         fonts.label.setColor(UiTheme.CYAN_SOFT);
         fonts.label.draw(batch, "O2", 976f, 674f);
@@ -366,25 +472,69 @@ public class MarsScreen extends ScreenAdapter {
             56f, Align.right, false);
 
         fonts.label.setColor(UiTheme.GREEN);
-        fonts.label.draw(batch, mission.getMarsSitesScanned() == 3
+        fonts.label.draw(batch, mission.getMarsSatellitesRepaired() == MissionState.MARS_SATELLITE_TARGET
             ? "BASE ARES // TODOS OS SISTEMAS ONLINE"
-            : "SINCRONIZE OS SISTEMAS MARCIANOS " + mission.getMarsSitesScanned() + "/3",
+            : "RESTAURE OS SATELITES MARCIANOS " + mission.getMarsSatellitesRepaired()
+                + "/" + MissionState.MARS_SATELLITE_TARGET,
             44f, 60f);
         fonts.micro.setColor(UiTheme.TEXT);
         fonts.micro.draw(batch,
             mission.getRepairCount() + " reparos lunares  //  arma preservada  //  autosave ativo",
             44f, 40f);
-        if (nearbySite >= 0) {
-            fonts.label.setColor(mission.isMarsSiteScanned(nearbySite) ? UiTheme.GREEN : UiTheme.WARNING);
-            fonts.label.draw(batch, mission.isMarsSiteScanned(nearbySite)
-                ? SITE_NAMES[nearbySite] + " // ONLINE"
-                : "[ E ] SINCRONIZAR " + SITE_NAMES[nearbySite], 582f, 57f);
+        if (nearbySatellite != null) {
+            int index = nearbySatellite.getIndex();
+            fonts.label.setColor(mission.isMarsSiteScanned(index) ? UiTheme.GREEN : UiTheme.WARNING);
+            fonts.label.draw(batch, nearbySatellite.isRepairing()
+                ? "REPARANDO " + SITE_NAMES[index] + " // "
+                    + Math.round(nearbySatellite.getRepairProgress() * 100f) + "%"
+                : mission.isMarsSiteScanned(index) ? SITE_NAMES[index] + " // ONLINE"
+                : "[ E ] REPARAR SATELITE " + SITE_NAMES[index], 582f, 57f);
         }
+        fonts.micro.setColor(inventoryOpen ? UiTheme.GREEN : marsAccent);
+        fonts.micro.draw(batch, inventoryOpen ? "[ I ] FECHAR INVENTARIO"
+            : "[ I ] ABRIR INVENTARIO", 990f, 60f);
         fonts.micro.setColor(UiTheme.MUTED);
-        fonts.micro.draw(batch, "WASD MOVER  E INTERAGIR  M MENU", 970f, 42f,
-            260f, Align.right, false);
+        fonts.micro.draw(batch, "WASD MOVER  E INTERAGIR  M MENU", 990f, 40f);
+        if (inventoryOpen) drawMarsInventory();
         batch.end();
         Gdx.gl.glDisable(GL20.GL_BLEND);
+        renderDamageIndicator();
+    }
+
+    private void renderDamageIndicator() {
+        if (damageFlashTimer <= 0f) return;
+        float strength = MathUtils.clamp(damageFlashTimer / 0.46f, 0f, 1f);
+        Gdx.gl.glEnable(GL20.GL_BLEND);
+        shapes.setProjectionMatrix(hudCamera.combined);
+        shapes.begin(ShapeRenderer.ShapeType.Filled);
+        shapes.setColor(0.84f, 0.02f, 0.01f, 0.12f * strength);
+        shapes.rect(0f, 0f, GameConstants.VIRTUAL_WIDTH, GameConstants.VIRTUAL_HEIGHT);
+        shapes.setColor(0.96f, 0.04f, 0.02f, 0.38f * strength);
+        shapes.rect(0f, 0f, GameConstants.VIRTUAL_WIDTH, 12f);
+        shapes.rect(0f, GameConstants.VIRTUAL_HEIGHT - 12f, GameConstants.VIRTUAL_WIDTH, 12f);
+        shapes.rect(0f, 12f, 12f, GameConstants.VIRTUAL_HEIGHT - 24f);
+        shapes.rect(GameConstants.VIRTUAL_WIDTH - 12f, 12f, 12f,
+            GameConstants.VIRTUAL_HEIGHT - 24f);
+        shapes.end();
+        Gdx.gl.glDisable(GL20.GL_BLEND);
+    }
+
+    private void drawMarsInventory() {
+        fonts.label.setColor(new Color(0.94f, 0.34f, 0.18f, 1f));
+        fonts.label.draw(batch, "CARGA MARCIANA", 1000f, 586f);
+        ItemType[] types = { ItemType.OXYGEN, ItemType.FOOD,
+            ItemType.MEDKIT, ItemType.ICE_ROCK };
+        String[] names = { "OXIGENIO", "RACAO ARES", "KIT MEDICO", "AMOSTRA" };
+        Texture[] icons = { game.getAssets().getMarsOxygen(), game.getAssets().getMarsFood(),
+            game.getAssets().getMarsMedkit(), game.getAssets().getMarsIceSample() };
+        for (int i = 0; i < types.length; i++) {
+            float y = 535f - i * 40f;
+            batch.draw(icons[i], 1004f, y - 16f, 24f, 24f);
+            fonts.micro.setColor(mission.getCount(types[i]) > 0 ? UiTheme.TEXT : UiTheme.MUTED);
+            fonts.micro.draw(batch, names[i], 1038f, y);
+            fonts.micro.draw(batch, "x" + mission.getCount(types[i]), 1180f, y,
+                42f, Align.right, false);
+        }
     }
 
     private void positionCamera() {

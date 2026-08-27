@@ -15,17 +15,17 @@ public class GameAssets {
 
     public void loadAll() {
 
-        loadTexture(
-            AssetPaths.ASTRONAUT
-        );
-        loadTexture(AssetPaths.ASTRONAUT_TRIPLE_T);
-        loadTexture(AssetPaths.ASTRONAUT_WINSTON);
-        loadTexture(AssetPaths.ASTRONAUT_SHREK);
-        loadTexture(AssetPaths.ASTRONAUT_NEON);
+        loadTexture(AssetPaths.ASTRONAUT_TRIPLE_T_LOCOMOTION);
+        loadTexture(AssetPaths.ASTRONAUT_WINSTON_LOCOMOTION);
+        loadTexture(AssetPaths.ASTRONAUT_SHREK_LOCOMOTION);
+        loadTexture(AssetPaths.ASTRONAUT_NEON_LOCOMOTION);
 
         loadTexture(
             AssetPaths.LUNAR_BASE
         );
+        loadTexture(AssetPaths.LUNAR_SURFACE);
+        loadTexture(AssetPaths.BASE_INTERIOR);
+        loadTexture(AssetPaths.CRAFTING_WORKBENCH);
 
         loadTexture(
             AssetPaths.OXYGEN
@@ -43,6 +43,10 @@ public class GameAssets {
             AssetPaths.FUEL
         );
         loadTexture(AssetPaths.MEDKIT);
+        loadTexture(AssetPaths.MARS_OXYGEN);
+        loadTexture(AssetPaths.MARS_FOOD);
+        loadTexture(AssetPaths.MARS_MEDKIT);
+        loadTexture(AssetPaths.MARS_ICE_SAMPLE);
 
         loadTexture(
             AssetPaths.OBSTACLE
@@ -55,8 +59,12 @@ public class GameAssets {
         loadTexture(
             AssetPaths.MARS_SURFACE
         );
+        loadTexture(AssetPaths.MARS_ROCK_SEDIMENTARY);
+        loadTexture(AssetPaths.MARS_ROCK_BASALT);
+        loadTexture(AssetPaths.MARS_ROCK_IRONSTONE);
 
         loadTexture(AssetPaths.ENEMY_SENTINEL);
+        loadTexture(AssetPaths.ENEMY_MARS_SKIMMER);
         loadTexture(AssetPaths.MISSION_COMPONENT);
         loadTexture(AssetPaths.ANTENNA_PART);
         loadTexture(AssetPaths.ENERGY_PART);
@@ -68,6 +76,10 @@ public class GameAssets {
         loadTexture(AssetPaths.EVA_WEAPON);
         loadTexture(AssetPaths.ENERGY_PROJECTILE);
         loadTexture(AssetPaths.REPAIR_STATION);
+        loadTexture(AssetPaths.REPAIR_STATION_BROKEN);
+        loadTexture(AssetPaths.MARS_SATELLITE_BROKEN);
+        loadTexture(AssetPaths.MARS_SATELLITE_REPAIRED);
+        loadTexture(AssetPaths.MISSION_PROTOCOL_INTRO);
         loadTexture(AssetPaths.MARS_BASE);
         loadTexture(AssetPaths.MARS_RESEARCH_SITE);
 
@@ -89,17 +101,17 @@ public class GameAssets {
 
     private void configureTextures() {
 
-        setLinear(
-            AssetPaths.ASTRONAUT
-        );
-        setLinear(AssetPaths.ASTRONAUT_TRIPLE_T);
-        setLinear(AssetPaths.ASTRONAUT_WINSTON);
-        setLinear(AssetPaths.ASTRONAUT_SHREK);
-        setLinear(AssetPaths.ASTRONAUT_NEON);
+        setLinear(AssetPaths.ASTRONAUT_TRIPLE_T_LOCOMOTION);
+        setLinear(AssetPaths.ASTRONAUT_WINSTON_LOCOMOTION);
+        setLinear(AssetPaths.ASTRONAUT_SHREK_LOCOMOTION);
+        setLinear(AssetPaths.ASTRONAUT_NEON_LOCOMOTION);
 
         setLinear(
             AssetPaths.LUNAR_BASE
         );
+        setLinear(AssetPaths.LUNAR_SURFACE);
+        setLinear(AssetPaths.BASE_INTERIOR);
+        setLinear(AssetPaths.CRAFTING_WORKBENCH);
 
         setLinear(
             AssetPaths.OXYGEN
@@ -117,6 +129,10 @@ public class GameAssets {
             AssetPaths.FUEL
         );
         setLinear(AssetPaths.MEDKIT);
+        setLinear(AssetPaths.MARS_OXYGEN);
+        setLinear(AssetPaths.MARS_FOOD);
+        setLinear(AssetPaths.MARS_MEDKIT);
+        setLinear(AssetPaths.MARS_ICE_SAMPLE);
 
         setLinear(
             AssetPaths.OBSTACLE
@@ -129,8 +145,12 @@ public class GameAssets {
         setLinear(
             AssetPaths.MARS_SURFACE
         );
+        setLinear(AssetPaths.MARS_ROCK_SEDIMENTARY);
+        setLinear(AssetPaths.MARS_ROCK_BASALT);
+        setLinear(AssetPaths.MARS_ROCK_IRONSTONE);
 
         setLinear(AssetPaths.ENEMY_SENTINEL);
+        setLinear(AssetPaths.ENEMY_MARS_SKIMMER);
         setLinear(AssetPaths.MISSION_COMPONENT);
         setLinear(AssetPaths.ANTENNA_PART);
         setLinear(AssetPaths.ENERGY_PART);
@@ -142,6 +162,10 @@ public class GameAssets {
         setLinear(AssetPaths.EVA_WEAPON);
         setLinear(AssetPaths.ENERGY_PROJECTILE);
         setLinear(AssetPaths.REPAIR_STATION);
+        setLinear(AssetPaths.REPAIR_STATION_BROKEN);
+        setLinear(AssetPaths.MARS_SATELLITE_BROKEN);
+        setLinear(AssetPaths.MARS_SATELLITE_REPAIRED);
+        setLinear(AssetPaths.MISSION_PROTOCOL_INTRO);
         setLinear(AssetPaths.MARS_BASE);
         setLinear(AssetPaths.MARS_RESEARCH_SITE);
     }
@@ -170,18 +194,12 @@ public class GameAssets {
     }
 
 
-    public Texture getAstronaut() {
-        return getTexture(
-            AssetPaths.ASTRONAUT
-        );
-    }
-
-    public Texture getAstronaut(com.orion.echoes.lua.config.AstronautType type) {
+    public Texture getAstronautLocomotion(com.orion.echoes.lua.config.AstronautType type) {
         return switch (type) {
-            case TRIPLE_T -> getTexture(AssetPaths.ASTRONAUT_TRIPLE_T);
-            case WINSTON -> getTexture(AssetPaths.ASTRONAUT_WINSTON);
-            case SHREK -> getTexture(AssetPaths.ASTRONAUT_SHREK);
-            case NEON -> getTexture(AssetPaths.ASTRONAUT_NEON);
+            case TRIPLE_T -> getTexture(AssetPaths.ASTRONAUT_TRIPLE_T_LOCOMOTION);
+            case WINSTON -> getTexture(AssetPaths.ASTRONAUT_WINSTON_LOCOMOTION);
+            case SHREK -> getTexture(AssetPaths.ASTRONAUT_SHREK_LOCOMOTION);
+            case NEON -> getTexture(AssetPaths.ASTRONAUT_NEON_LOCOMOTION);
         };
     }
 
@@ -190,6 +208,10 @@ public class GameAssets {
             AssetPaths.LUNAR_BASE
         );
     }
+
+    public Texture getLunarSurface() { return getTexture(AssetPaths.LUNAR_SURFACE); }
+    public Texture getBaseInterior() { return getTexture(AssetPaths.BASE_INTERIOR); }
+    public Texture getCraftingWorkbench() { return getTexture(AssetPaths.CRAFTING_WORKBENCH); }
 
     public Texture getOxygen() {
         return getTexture(
@@ -216,6 +238,10 @@ public class GameAssets {
     }
 
     public Texture getMedkit() { return getTexture(AssetPaths.MEDKIT); }
+    public Texture getMarsOxygen() { return getTexture(AssetPaths.MARS_OXYGEN); }
+    public Texture getMarsFood() { return getTexture(AssetPaths.MARS_FOOD); }
+    public Texture getMarsMedkit() { return getTexture(AssetPaths.MARS_MEDKIT); }
+    public Texture getMarsIceSample() { return getTexture(AssetPaths.MARS_ICE_SAMPLE); }
 
     public Texture getObstacle() {
         return getTexture(
@@ -233,7 +259,12 @@ public class GameAssets {
         return getTexture(AssetPaths.MARS_SURFACE);
     }
 
+    public Texture getMarsRockSedimentary() { return getTexture(AssetPaths.MARS_ROCK_SEDIMENTARY); }
+    public Texture getMarsRockBasalt() { return getTexture(AssetPaths.MARS_ROCK_BASALT); }
+    public Texture getMarsRockIronstone() { return getTexture(AssetPaths.MARS_ROCK_IRONSTONE); }
+
     public Texture getEnemySentinel() { return getTexture(AssetPaths.ENEMY_SENTINEL); }
+    public Texture getEnemyMarsSkimmer() { return getTexture(AssetPaths.ENEMY_MARS_SKIMMER); }
     public Texture getMissionComponent() { return getTexture(AssetPaths.MISSION_COMPONENT); }
     public Texture getAntennaPart() { return getTexture(AssetPaths.ANTENNA_PART); }
     public Texture getEnergyPart() { return getTexture(AssetPaths.ENERGY_PART); }
@@ -245,6 +276,10 @@ public class GameAssets {
     public Texture getEvaWeapon() { return getTexture(AssetPaths.EVA_WEAPON); }
     public Texture getEnergyProjectile() { return getTexture(AssetPaths.ENERGY_PROJECTILE); }
     public Texture getRepairStation() { return getTexture(AssetPaths.REPAIR_STATION); }
+    public Texture getRepairStationBroken() { return getTexture(AssetPaths.REPAIR_STATION_BROKEN); }
+    public Texture getMarsSatelliteBroken() { return getTexture(AssetPaths.MARS_SATELLITE_BROKEN); }
+    public Texture getMarsSatelliteRepaired() { return getTexture(AssetPaths.MARS_SATELLITE_REPAIRED); }
+    public Texture getMissionProtocolIntro() { return getTexture(AssetPaths.MISSION_PROTOCOL_INTRO); }
     public Texture getMarsBase() { return getTexture(AssetPaths.MARS_BASE); }
     public Texture getMarsResearchSite() { return getTexture(AssetPaths.MARS_RESEARCH_SITE); }
 

@@ -63,6 +63,9 @@ public final class BaseInteriorScreen extends ScreenAdapter {
     private int selectedRecipe;
     private int activeRecipe = -1;
     private float craftingTimer;
+    private float shownOxygen = -1f;
+    private float shownHealth = -1f;
+    private float shownEnergy = -1f;
     private final Vector2 uiPointer = new Vector2();
 
     public BaseInteriorScreen(LunarEchoesGame game, MissionState mission,
@@ -133,6 +136,7 @@ public final class BaseInteriorScreen extends ScreenAdapter {
 
         status.addOxygen(GameConstants.BASE_OXYGEN_RECHARGE_RATE * safeDelta);
         status.addEnergy(GameConstants.ENERGY_RECOVERY_RATE * 0.65f * safeDelta);
+        updateHudAnimation(safeDelta);
         particles.update(safeDelta, player, false, false, null, false);
         game.getAudio().update(safeDelta, player.isMoving(), true,
             false, false, 0f, 0f);
@@ -354,11 +358,11 @@ public final class BaseInteriorScreen extends ScreenAdapter {
         UiTheme.panel(shapes, 338f, 628f, 598f, 68f, UiTheme.CYAN);
         UiTheme.panel(shapes, 956f, 620f, 300f, 76f, UiTheme.CYAN_SOFT);
         UiTheme.bar(shapes, 1036f, 670f, 138f, 5f,
-            status.getOxygen() / GameConstants.MAX_OXYGEN, UiTheme.CYAN);
+            shownOxygen / GameConstants.MAX_OXYGEN, UiTheme.CYAN);
         UiTheme.bar(shapes, 1036f, 651f, 138f, 5f,
-            status.getHealth() / GameConstants.MAX_HEALTH, UiTheme.GREEN);
+            shownHealth / GameConstants.MAX_HEALTH, UiTheme.GREEN);
         UiTheme.bar(shapes, 1036f, 632f, 138f, 5f,
-            status.getEnergy() / GameConstants.MAX_ENERGY, UiTheme.GREEN);
+            shownEnergy / GameConstants.MAX_ENERGY, UiTheme.GREEN);
         UiTheme.panel(shapes, 320f, 20f, 640f, 72f,
             nearWorkbench ? UiTheme.CYAN : nearAirlock ? UiTheme.GREEN : UiTheme.CYAN_SOFT);
         shapes.end();
@@ -429,6 +433,18 @@ public final class BaseInteriorScreen extends ScreenAdapter {
         fonts.label.draw(batch, title, 340f, 70f, 600f, Align.center, false);
         fonts.micro.setColor(UiTheme.MUTED);
         fonts.micro.draw(batch, detail, 340f, 43f, 600f, Align.center, false);
+    }
+
+    private void updateHudAnimation(float delta) {
+        if (shownOxygen < 0f) {
+            shownOxygen = status.getOxygen();
+            shownHealth = status.getHealth();
+            shownEnergy = status.getEnergy();
+        }
+        float response = 1f - (float) Math.pow(0.0008f, delta);
+        shownOxygen = MathUtils.lerp(shownOxygen, status.getOxygen(), response);
+        shownHealth = MathUtils.lerp(shownHealth, status.getHealth(), response);
+        shownEnergy = MathUtils.lerp(shownEnergy, status.getEnergy(), response);
     }
 
     @Override

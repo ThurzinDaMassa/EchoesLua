@@ -30,16 +30,21 @@ public final class UiTheme {
         float height,
         Color accent
     ) {
-        shapes.setColor(0f, 0f, 0f, 0.36f);
-        shapes.rect(x + 7f, y - 7f, width, height);
-        shapes.setColor(PANEL);
+        shapes.setColor(0f, 0f, 0f, 0.28f);
+        shapes.rect(x + 5f, y - 5f, width, height);
+        shapes.setColor(0.008f, 0.021f, 0.031f, 0.93f);
         shapes.rect(x, y, width, height);
-        shapes.setColor(BORDER);
+        shapes.setColor(0.025f, 0.062f, 0.082f, 0.50f);
+        shapes.rect(x + 1f, y + 1f, width - 2f, height - 2f);
+        shapes.setColor(BORDER.r, BORDER.g, BORDER.b, 0.84f);
         shapes.rect(x, y, width, 1f);
         shapes.rect(x, y + height - 1f, width, 1f);
-        shapes.setColor(accent);
-        shapes.rect(x, y, 4f, height);
-        shapes.rect(x, y + height - 3f, 48f, 3f);
+        shapes.rect(x + width - 1f, y, 1f, height);
+        shapes.setColor(accent.r, accent.g, accent.b, 0.94f);
+        shapes.rect(x, y, 3f, height);
+        shapes.rect(x, y + height - 3f, Math.min(54f, width * 0.24f), 3f);
+        shapes.setColor(accent.r, accent.g, accent.b, 0.15f);
+        shapes.rect(x + 3f, y + 1f, Math.min(88f, width * 0.36f), height - 2f);
     }
 
     public static void bar(
@@ -51,11 +56,18 @@ public final class UiTheme {
         float value,
         Color color
     ) {
-        shapes.setColor(0.005f, 0.014f, 0.021f, 0.9f);
+        float clamped = MathUtils.clamp(value, 0f, 1f);
+        shapes.setColor(0.002f, 0.009f, 0.014f, 0.96f);
         shapes.rect(x, y, width, height);
-        shapes.setColor(color);
-        shapes.rect(x, y, width * MathUtils.clamp(value, 0f, 1f), height);
+        shapes.setColor(color.r, color.g, color.b, 0.18f);
+        shapes.rect(x - 2f, y - 2f, width * clamped + 4f, height + 4f);
+        shapes.setColor(color.r, color.g, color.b, 0.96f);
+        shapes.rect(x, y, width * clamped, height);
         shapes.setColor(1f, 1f, 1f, 0.12f);
         shapes.rect(x, y + height - 1f, width, 1f);
+        shapes.setColor(0.002f, 0.009f, 0.014f, 0.72f);
+        for (int i = 1; i < 5; i++) {
+            shapes.rect(x + width * i / 5f, y, 1f, height);
+        }
     }
 }

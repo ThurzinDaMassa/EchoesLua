@@ -45,6 +45,7 @@ public class MenuScreen extends ScreenAdapter {
     private final float[] starX = new float[STAR_COUNT];
     private final float[] starY = new float[STAR_COUNT];
     private final float[] starSize = new float[STAR_COUNT];
+    private final float[] hoverStrength = new float[4];
 
     private OrthographicCamera camera;
     private Viewport viewport;
@@ -94,6 +95,7 @@ public class MenuScreen extends ScreenAdapter {
         animationTime += Math.min(delta, 1f / 20f);
         updateMouse();
         updateHoverSound();
+        updateMenuAnimation(Math.min(delta, 1f / 20f));
         handleInput();
         if (changingScreen) return;
 
@@ -128,6 +130,14 @@ public class MenuScreen extends ScreenAdapter {
         if (optionsButton.contains(point)) return 2;
         if (exitButton.contains(point)) return 3;
         return -1;
+    }
+
+    private void updateMenuAnimation(float delta) {
+        float response = 1f - (float) Math.pow(0.00005f, delta);
+        for (int i = 0; i < hoverStrength.length; i++) {
+            hoverStrength[i] = MathUtils.lerp(hoverStrength[i], hoveredButton == i ? 1f : 0f,
+                response);
+        }
     }
 
     private void handleInput() {
@@ -337,27 +347,38 @@ public class MenuScreen extends ScreenAdapter {
             Rectangle button = difficultyButtons[i];
             boolean selected = game.getSettings().getDifficulty().ordinal() == i;
             boolean hover = button.contains(mouse);
-            shapes.setColor(selected ? new Color(0.025f, 0.18f, 0.23f, 0.98f)
+            float selectedPulse = selected ? 0.025f + MathUtils.sin(animationTime * 3f) * 0.008f : 0f;
+            shapes.setColor(selected ? new Color(0.025f, 0.18f + selectedPulse, 0.23f, 0.98f)
                 : hover ? UiTheme.PANEL_LIGHT : UiTheme.PANEL_SOLID);
             shapes.rect(button.x, button.y, button.width, button.height);
             shapes.setColor(selected ? UiTheme.CYAN : UiTheme.BORDER);
             shapes.rect(button.x, button.y, 3f, button.height);
             shapes.rect(button.x, button.y + button.height - 1f, button.width, 1f);
+            if (selected) {
+                shapes.setColor(UiTheme.CYAN.r, UiTheme.CYAN.g, UiTheme.CYAN.b, 0.16f);
+                shapes.rect(button.x + 3f, button.y + 1f,
+                    button.width - 3f, button.height - 2f);
+            }
         }
         shapes.end();
         disableBlend();
     }
 
     private void drawButton(Rectangle button, int index, boolean primary) {
-        boolean hover = hoveredButton == index;
-        shapes.setColor(hover ? UiTheme.PANEL_LIGHT : UiTheme.PANEL_SOLID);
+        float hover = hoverStrength[index];
+        shapes.setColor(
+            MathUtils.lerp(UiTheme.PANEL_SOLID.r, UiTheme.PANEL_LIGHT.r, hover),
+            MathUtils.lerp(UiTheme.PANEL_SOLID.g, UiTheme.PANEL_LIGHT.g, hover),
+            MathUtils.lerp(UiTheme.PANEL_SOLID.b, UiTheme.PANEL_LIGHT.b, hover), 1f);
         shapes.rect(button.x, button.y, button.width, button.height);
-        shapes.setColor(primary || hover ? UiTheme.CYAN : UiTheme.BORDER);
+        shapes.setColor(primary || hover > 0.05f ? UiTheme.CYAN : UiTheme.BORDER);
         shapes.rect(button.x, button.y, 4f, button.height);
         shapes.rect(button.x, button.y + button.height - 1f, button.width, 1f);
-        if (hover) {
-            shapes.setColor(0.05f, 0.84f, 1f, 0.08f);
-            shapes.rect(button.x + 4f, button.y, button.width - 4f, button.height);
+        if (hover > 0.01f) {
+            shapes.setColor(0.05f, 0.84f, 1f, 0.10f * hover);
+            shapes.rect(button.x + 4f, button.y, (button.width - 4f) * hover, button.height);
+            shapes.setColor(0.42f, 0.94f, 1f, 0.48f * hover);
+            shapes.rect(button.x + 4f, button.y, (button.width - 4f) * hover, 2f);
         }
     }
 

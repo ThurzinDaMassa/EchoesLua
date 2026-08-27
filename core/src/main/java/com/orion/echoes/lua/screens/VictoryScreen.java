@@ -40,6 +40,8 @@ public class VictoryScreen extends ScreenAdapter {
     private UiFonts fonts;
     private Texture portalTexture;
     private float animationTime;
+    private float resultReveal;
+    private int displayedScore;
     private boolean changingScreen;
 
     public VictoryScreen(
@@ -83,6 +85,10 @@ public class VictoryScreen extends ScreenAdapter {
     public void render(float delta) {
         if (changingScreen) return;
         animationTime += delta;
+        float safeDelta = Math.min(delta, 1f / 20f);
+        resultReveal = MathUtils.lerp(resultReveal, 1f,
+            1f - (float) Math.pow(0.00008f, safeDelta));
+        displayedScore = Math.round(score * resultReveal);
         handleInput();
         if (changingScreen) return;
         clear();
@@ -146,69 +152,75 @@ public class VictoryScreen extends ScreenAdapter {
     }
 
     private void drawResultsPanel() {
+        float yOff = -24f * (1f - resultReveal);
         enableBlend();
         shapes.begin(ShapeRenderer.ShapeType.Filled);
-        UiTheme.panel(shapes, 54f, 52f, 650f, 616f,
+        UiTheme.panel(shapes, 54f, 52f + yOff, 650f, 616f,
             newRecord ? UiTheme.GREEN : UiTheme.CYAN);
 
         shapes.setColor(UiTheme.PANEL_LIGHT);
-        shapes.rect(86f, 273f, 174f, 86f);
-        shapes.rect(276f, 273f, 174f, 86f);
-        shapes.rect(466f, 273f, 206f, 86f);
+        shapes.rect(86f, 273f + yOff, 174f, 86f * resultReveal);
+        shapes.rect(276f, 273f + yOff, 174f, 86f * resultReveal);
+        shapes.rect(466f, 273f + yOff, 206f, 86f * resultReveal);
+        shapes.setColor(newRecord ? UiTheme.GREEN : UiTheme.CYAN);
+        shapes.rect(86f, 273f + yOff, 174f * resultReveal, 3f);
+        shapes.rect(276f, 273f + yOff, 174f * resultReveal, 3f);
+        shapes.rect(466f, 273f + yOff, 206f * resultReveal, 3f);
 
         shapes.setColor(UiTheme.BORDER);
-        shapes.rect(86f, 392f, 586f, 1f);
+        shapes.rect(86f, 392f + yOff, 586f * resultReveal, 1f);
 
         shapes.setColor(UiTheme.PANEL_LIGHT);
-        shapes.rect(86f, 105f, 276f, 58f);
-        shapes.rect(378f, 105f, 294f, 58f);
+        shapes.rect(86f, 105f + yOff, 276f, 58f);
+        shapes.rect(378f, 105f + yOff, 294f, 58f);
         shapes.setColor(UiTheme.CYAN);
-        shapes.rect(86f, 105f, 4f, 58f);
+        shapes.rect(86f, 105f + yOff, 4f, 58f);
         shapes.setColor(UiTheme.BORDER);
-        shapes.rect(378f, 105f, 4f, 58f);
+        shapes.rect(378f, 105f + yOff, 4f, 58f);
         shapes.end();
         disableBlend();
     }
 
     private void drawResultsText() {
+        float yOff = -24f * (1f - resultReveal);
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
 
         set(fonts.micro, newRecord ? UiTheme.GREEN : UiTheme.CYAN);
         fonts.micro.draw(batch,
             newRecord ? "NOVO RECORDE // INTEGRACAO CONFIRMADA" : "INTEGRACAO CONFIRMADA // SINAL ESTAVEL",
-            86f, 628f);
+            86f, 628f + yOff);
         set(fonts.heading, UiTheme.TEXT);
-        fonts.heading.draw(batch, "MISSAO CONCLUIDA", 86f, 583f);
+        fonts.heading.draw(batch, "MISSAO CONCLUIDA", 86f, 583f + yOff);
         set(fonts.body, UiTheme.MUTED);
         fonts.body.draw(batch, "Lua restaurada. Base Ares sincronizada. Rota interplanetaria estavel.",
-            86f, 546f, 570f, Align.left, true);
+            86f, 546f + yOff, 570f, Align.left, true);
 
         set(fonts.micro, UiTheme.CYAN_SOFT);
-        fonts.micro.draw(batch, "PONTUACAO DA MISSAO", 86f, 482f);
+        fonts.micro.draw(batch, "PONTUACAO DA MISSAO", 86f, 482f + yOff);
         set(fonts.display, newRecord ? UiTheme.GREEN : UiTheme.TEXT);
-        fonts.display.draw(batch, String.valueOf(score), 82f, 438f);
+        fonts.display.draw(batch, String.valueOf(displayedScore), 82f, 438f + yOff);
         set(fonts.micro, UiTheme.MUTED);
-        fonts.micro.draw(batch, "MELHOR REGISTRO  " + bestScore, 430f, 438f,
+        fonts.micro.draw(batch, "MELHOR REGISTRO  " + bestScore, 430f, 438f + yOff,
             242f, Align.right, false);
 
-        stat("TEMPO", formatTime(missionTime), 104f);
-        stat("ITENS", String.valueOf(collectedItems), 294f);
-        stat("O2 RESIDUAL", Math.round(oxygen) + "%", 484f);
+        stat("TEMPO", formatTime(missionTime), 104f, yOff);
+        stat("ITENS", String.valueOf(collectedItems), 294f, yOff);
+        stat("O2 RESIDUAL", Math.round(oxygen) + "%", 484f, yOff);
 
         set(fonts.micro, UiTheme.MUTED);
-        fonts.micro.draw(batch, "RECURSOS PRESERVADOS NA TRANSICAO", 86f, 235f);
+        fonts.micro.draw(batch, "RECURSOS PRESERVADOS NA TRANSICAO", 86f, 235f + yOff);
         set(fonts.body, UiTheme.TEXT);
-        fonts.body.draw(batch, "AGUA  " + water + "     H2  " + fuel, 86f, 202f);
+        fonts.body.draw(batch, "AGUA  " + water + "     H2  " + fuel, 86f, 202f + yOff);
 
         set(fonts.label, UiTheme.CYAN);
-        fonts.label.draw(batch, "[ R ]", 108f, 141f);
+        fonts.label.draw(batch, "[ R ]", 108f, 141f + yOff);
         set(fonts.label, UiTheme.TEXT);
-        fonts.label.draw(batch, "NOVA MISSAO", 170f, 141f);
+        fonts.label.draw(batch, "NOVA MISSAO", 170f, 141f + yOff);
         set(fonts.label, UiTheme.CYAN_SOFT);
-        fonts.label.draw(batch, "[ M ]", 400f, 141f);
+        fonts.label.draw(batch, "[ M ]", 400f, 141f + yOff);
         set(fonts.label, UiTheme.TEXT);
-        fonts.label.draw(batch, "MENU PRINCIPAL", 462f, 141f);
+        fonts.label.draw(batch, "MENU PRINCIPAL", 462f, 141f + yOff);
 
         set(fonts.micro, UiTheme.CYAN_SOFT);
         fonts.micro.draw(batch, "ROTA LUA > MARTE // ESTAVEL", 850f, 640f);
@@ -217,11 +229,11 @@ public class VictoryScreen extends ScreenAdapter {
         batch.end();
     }
 
-    private void stat(String label, String value, float x) {
+    private void stat(String label, String value, float x, float yOff) {
         set(fonts.micro, UiTheme.MUTED);
-        fonts.micro.draw(batch, label, x, 337f);
+        fonts.micro.draw(batch, label, x, 337f + yOff);
         set(fonts.heading, UiTheme.TEXT);
-        fonts.heading.draw(batch, value, x, 305f);
+        fonts.heading.draw(batch, value, x, 305f + yOff);
     }
 
     private String formatTime(float seconds) {

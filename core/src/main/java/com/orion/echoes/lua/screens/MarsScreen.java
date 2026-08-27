@@ -73,6 +73,10 @@ public class MarsScreen extends ScreenAdapter {
     private boolean inventoryOpen;
     private float repairSparkTimer;
     private float damageFlashTimer;
+    private float inventoryReveal;
+    private float shownOxygen = -1f;
+    private float shownHealth = -1f;
+    private float shownEnergy = -1f;
 
     private static final String[] SITE_NAMES = {
         "HERMES", "DEIMOS", "PHOBOS", "ARES RELAY"
@@ -130,6 +134,7 @@ public class MarsScreen extends ScreenAdapter {
         float safeDelta = Math.min(delta, 1f / 30f);
         handleInput();
         if (changingScreen) return;
+        updateHudAnimation(safeDelta);
         player.update(safeDelta, status);
         aimWorld.set(Gdx.input.getX(), Gdx.input.getY());
         viewport.unproject(aimWorld);
@@ -417,31 +422,32 @@ public class MarsScreen extends ScreenAdapter {
         Gdx.gl.glEnable(GL20.GL_BLEND);
         shapes.begin(ShapeRenderer.ShapeType.Filled);
         Color marsAccent = new Color(0.94f, 0.28f, 0.12f, 1f);
-        UiTheme.panel(shapes, 24f, 640f, 280f, 56f, marsAccent);
-        UiTheme.panel(shapes, 324f, 640f, 612f, 56f, marsAccent);
+        UiTheme.panel(shapes, 24f, 646f, 270f, 50f, marsAccent);
+        UiTheme.panel(shapes, 312f, 646f, 626f, 50f, marsAccent);
         UiTheme.panel(shapes, 956f, 620f, 300f, 76f, UiTheme.CYAN_SOFT);
         UiTheme.bar(shapes, 1032f, 671f, 142f, 5f,
-            status.getOxygen() / GameConstants.MAX_OXYGEN,
+            shownOxygen / GameConstants.MAX_OXYGEN,
             status.getOxygen() < 25f ? UiTheme.DANGER : UiTheme.CYAN);
         UiTheme.bar(shapes, 1032f, 652f, 142f, 5f,
-            status.getHealth() / GameConstants.MAX_HEALTH,
+            shownHealth / GameConstants.MAX_HEALTH,
             status.getHealth() < 30f ? UiTheme.DANGER : UiTheme.GREEN);
         UiTheme.bar(shapes, 1032f, 633f, 142f, 5f,
-            status.getEnergy() / GameConstants.MAX_ENERGY, UiTheme.GREEN);
-        UiTheme.panel(shapes, 24f, 22f, 520f, 58f, UiTheme.GREEN);
+            shownEnergy / GameConstants.MAX_ENERGY, UiTheme.GREEN);
+        UiTheme.panel(shapes, 24f, 22f, 520f, 52f, UiTheme.GREEN);
         if (nearbySatellite != null) {
-            UiTheme.panel(shapes, 562f, 22f, 388f, 58f,
+            UiTheme.panel(shapes, 562f, 22f, 388f, 52f,
                 mission.isMarsSiteScanned(nearbySatellite.getIndex()) ? UiTheme.GREEN : UiTheme.WARNING);
         }
-        UiTheme.panel(shapes, 970f, 22f, 286f, 58f,
+        UiTheme.panel(shapes, 970f, 22f, 286f, 52f,
             inventoryOpen ? UiTheme.GREEN : marsAccent);
-        if (inventoryOpen) {
-            UiTheme.panel(shapes, 980f, 390f, 276f, 220f, marsAccent);
+        if (inventoryReveal > 0.02f) {
+            float drawerX = GameConstants.VIRTUAL_WIDTH - 300f * inventoryReveal;
+            UiTheme.panel(shapes, drawerX, 390f, 280f, 220f, marsAccent);
             for (int i = 0; i < 4; i++) {
                 shapes.setColor(0.035f, 0.018f, 0.014f, 0.95f);
-                shapes.rect(998f, 512f - i * 40f, 240f, 34f);
+                shapes.rect(drawerX + 18f, 512f - i * 40f, 244f, 34f);
                 shapes.setColor(UiTheme.BORDER);
-                shapes.rect(998f, 512f - i * 40f, 240f, 1f);
+                shapes.rect(drawerX + 18f, 512f - i * 40f, 244f, 1f);
             }
         }
         shapes.end();
@@ -449,17 +455,17 @@ public class MarsScreen extends ScreenAdapter {
         batch.setProjectionMatrix(hudCamera.combined);
         batch.begin();
         fonts.label.setColor(0.94f, 0.34f, 0.18f, 1f);
-        fonts.label.draw(batch, "MARTE // BASE ARES", 44f, 674f);
+        fonts.label.draw(batch, "MARTE // BASE ARES", 44f, 678f);
         fonts.micro.setColor(UiTheme.MUTED);
-        fonts.micro.draw(batch, "SUPERFICIE // SOL " + formatTime(time), 44f, 652f);
+        fonts.micro.draw(batch, "SUPERFICIE // SOL " + formatTime(time), 44f, 657f);
         fonts.label.setColor(UiTheme.TEXT);
         fonts.label.draw(batch, mission.getMarsSatellitesRepaired() == MissionState.MARS_SATELLITE_TARGET
             ? "PROTOCOLO ARES CONCLUIDO" : "REPARE OS SATELITES  "
-                + mission.getMarsSatellitesRepaired() + "/" + MissionState.MARS_SATELLITE_TARGET, 344f, 674f);
+                + mission.getMarsSatellitesRepaired() + "/" + MissionState.MARS_SATELLITE_TARGET, 336f, 678f);
         fonts.micro.setColor(UiTheme.MUTED);
         fonts.micro.draw(batch, mission.getMarsSatellitesRepaired() == MissionState.MARS_SATELLITE_TARGET
             ? "Transmitindo relatorio final..." : "Repare os quatro satelites marcados no mapa.",
-            344f, 652f);
+            336f, 657f);
         fonts.label.setColor(UiTheme.CYAN_SOFT);
         fonts.label.draw(batch, "O2", 976f, 674f);
         fonts.micro.draw(batch, "HP", 976f, 655f);
@@ -477,11 +483,11 @@ public class MarsScreen extends ScreenAdapter {
             ? "BASE ARES // TODOS OS SISTEMAS ONLINE"
             : "RESTAURE OS SATELITES MARCIANOS " + mission.getMarsSatellitesRepaired()
                 + "/" + MissionState.MARS_SATELLITE_TARGET,
-            44f, 60f);
+            44f, 57f);
         fonts.micro.setColor(UiTheme.TEXT);
         fonts.micro.draw(batch,
             mission.getRepairCount() + " reparos lunares  //  arma preservada  //  autosave ativo",
-            44f, 40f);
+            44f, 37f);
         if (nearbySatellite != null) {
             int index = nearbySatellite.getIndex();
             fonts.label.setColor(mission.isMarsSiteScanned(index) ? UiTheme.GREEN : UiTheme.WARNING);
@@ -489,14 +495,16 @@ public class MarsScreen extends ScreenAdapter {
                 ? "REPARANDO " + SITE_NAMES[index] + " // "
                     + Math.round(nearbySatellite.getRepairProgress() * 100f) + "%"
                 : mission.isMarsSiteScanned(index) ? SITE_NAMES[index] + " // ONLINE"
-                : "[ E ] REPARAR SATELITE " + SITE_NAMES[index], 582f, 57f);
+                : "[ E ] REPARAR SATELITE " + SITE_NAMES[index], 582f, 54f);
         }
         fonts.micro.setColor(inventoryOpen ? UiTheme.GREEN : marsAccent);
         fonts.micro.draw(batch, inventoryOpen ? "[ I ] FECHAR INVENTARIO"
-            : "[ I ] ABRIR INVENTARIO", 990f, 60f);
+            : "[ I ] ABRIR INVENTARIO", 990f, 56f);
         fonts.micro.setColor(UiTheme.MUTED);
-        fonts.micro.draw(batch, "WASD MOVER  E INTERAGIR  M MENU", 990f, 40f);
-        if (inventoryOpen) drawMarsInventory();
+        fonts.micro.draw(batch, "WASD MOVER  E INTERAGIR  M MENU", 990f, 36f);
+        if (inventoryReveal > 0.02f) {
+            drawMarsInventory(GameConstants.VIRTUAL_WIDTH - 300f * inventoryReveal);
+        }
         batch.end();
         Gdx.gl.glDisable(GL20.GL_BLEND);
         renderDamageIndicator();
@@ -520,9 +528,9 @@ public class MarsScreen extends ScreenAdapter {
         Gdx.gl.glDisable(GL20.GL_BLEND);
     }
 
-    private void drawMarsInventory() {
+    private void drawMarsInventory(float drawerX) {
         fonts.label.setColor(new Color(0.94f, 0.34f, 0.18f, 1f));
-        fonts.label.draw(batch, "CARGA MARCIANA", 1000f, 586f);
+        fonts.label.draw(batch, "CARGA MARCIANA", drawerX + 20f, 586f);
         ItemType[] types = { ItemType.OXYGEN, ItemType.FOOD,
             ItemType.MEDKIT, ItemType.ICE_ROCK };
         String[] names = { "OXIGENIO", "RACAO ARES", "KIT MEDICO", "AMOSTRA" };
@@ -530,12 +538,26 @@ public class MarsScreen extends ScreenAdapter {
             game.getAssets().getMarsMedkit(), game.getAssets().getMarsIceSample() };
         for (int i = 0; i < types.length; i++) {
             float y = 535f - i * 40f;
-            batch.draw(icons[i], 1004f, y - 16f, 24f, 24f);
+            batch.draw(icons[i], drawerX + 24f, y - 16f, 24f, 24f);
             fonts.micro.setColor(mission.getCount(types[i]) > 0 ? UiTheme.TEXT : UiTheme.MUTED);
-            fonts.micro.draw(batch, names[i], 1038f, y);
-            fonts.micro.draw(batch, "x" + mission.getCount(types[i]), 1180f, y,
+            fonts.micro.draw(batch, names[i], drawerX + 58f, y);
+            fonts.micro.draw(batch, "x" + mission.getCount(types[i]), drawerX + 200f, y,
                 42f, Align.right, false);
         }
+    }
+
+    private void updateHudAnimation(float delta) {
+        if (shownOxygen < 0f) {
+            shownOxygen = status.getOxygen();
+            shownHealth = status.getHealth();
+            shownEnergy = status.getEnergy();
+        }
+        float response = 1f - (float) Math.pow(0.0008f, delta);
+        shownOxygen = MathUtils.lerp(shownOxygen, status.getOxygen(), response);
+        shownHealth = MathUtils.lerp(shownHealth, status.getHealth(), response);
+        shownEnergy = MathUtils.lerp(shownEnergy, status.getEnergy(), response);
+        inventoryReveal = MathUtils.lerp(inventoryReveal, inventoryOpen ? 1f : 0f,
+            1f - (float) Math.pow(0.0002f, delta));
     }
 
     private void positionCamera() {

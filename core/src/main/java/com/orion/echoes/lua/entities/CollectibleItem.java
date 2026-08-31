@@ -128,6 +128,22 @@ public class CollectibleItem {
                 return assets.getWeaponPartB();
             case WEAPON_PART_C:
                 return assets.getWeaponPartC();
+            case ALLOY_PLATE:
+                return assets.getAlloyPlate();
+            case QUANTUM_CORE:
+                return assets.getQuantumCore();
+            case FIBER_MESH:
+                return assets.getFiberMesh();
+            case MINING_TOOL:
+                return assets.getMiningTool();
+            case REPAIR_TOOL:
+                return assets.getRepairTool();
+            case ARMOR_HELMET:
+                return assets.getArmorHelmet();
+            case ARMOR_CHEST:
+                return assets.getArmorChest();
+            case ARMOR_BOOTS:
+                return assets.getArmorBoots();
 
             default:
                 throw new IllegalArgumentException(
@@ -153,6 +169,12 @@ public class CollectibleItem {
                 return 62f;
             case MEDKIT:
                 return 58f;
+            case ALLOY_PLATE, QUANTUM_CORE, FIBER_MESH:
+                return 56f;
+            case MINING_TOOL, REPAIR_TOOL:
+                return 64f;
+            case ARMOR_HELMET, ARMOR_CHEST, ARMOR_BOOTS:
+                return 62f;
 
             default:
                 return 48f;
@@ -240,6 +262,11 @@ public class CollectibleItem {
             case FOOD -> new Color(1f, 0.78f, 0.22f, 1f);
             case ICE_ROCK -> new Color(0.54f, 0.88f, 1f, 1f);
             case MEDKIT -> new Color(0.30f, 1f, 0.54f, 1f);
+            case ALLOY_PLATE -> new Color(0.66f, 0.88f, 1f, 1f);
+            case QUANTUM_CORE -> new Color(0.30f, 1f, 0.92f, 1f);
+            case FIBER_MESH -> new Color(1f, 0.64f, 0.22f, 1f);
+            case ARMOR_HELMET, ARMOR_CHEST, ARMOR_BOOTS -> new Color(0.24f, 0.92f, 1f, 1f);
+            case MINING_TOOL, REPAIR_TOOL -> new Color(1f, 0.76f, 0.25f, 1f);
             default -> new Color(0.22f, 0.96f, 1f, 1f);
         };
     }

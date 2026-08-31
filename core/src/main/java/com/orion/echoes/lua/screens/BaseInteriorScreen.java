@@ -23,6 +23,7 @@ import com.orion.echoes.lua.progress.MissionState;
 import com.orion.echoes.lua.systems.PlayerStatus;
 import com.orion.echoes.lua.ui.UiFonts;
 import com.orion.echoes.lua.ui.UiTheme;
+import com.orion.echoes.lua.ui.InventoryOverlay;
 import com.orion.echoes.lua.utils.GameConstants;
 
 /** Playable pressurized interior of the lunar base. */
@@ -46,6 +47,7 @@ public final class BaseInteriorScreen extends ScreenAdapter {
     private SpriteBatch batch;
     private ShapeRenderer shapes;
     private UiFonts fonts;
+    private InventoryOverlay inventoryOverlay;
     private OrthographicCamera camera;
     private Viewport viewport;
     private Texture interiorTexture;
@@ -92,6 +94,7 @@ public final class BaseInteriorScreen extends ScreenAdapter {
         batch = game.getBatch();
         shapes = new ShapeRenderer();
         fonts = new UiFonts();
+        inventoryOverlay = new InventoryOverlay(game.getAssets());
         camera = new OrthographicCamera();
         camera.setToOrtho(false, GameConstants.VIRTUAL_WIDTH, GameConstants.VIRTUAL_HEIGHT);
         viewport = new FitViewport(GameConstants.VIRTUAL_WIDTH, GameConstants.VIRTUAL_HEIGHT, camera);
@@ -119,8 +122,9 @@ public final class BaseInteriorScreen extends ScreenAdapter {
 
         handleGlobalInput();
         if (changingScreen) return;
+        inventoryOverlay.update(mission);
 
-        if (!craftingMenuOpen) {
+        if (!craftingMenuOpen && !inventoryOverlay.isOpen()) {
             player.update(safeDelta, status);
             clampPlayerToRoom();
             if (workbench.blocks(player)) {
@@ -153,9 +157,18 @@ public final class BaseInteriorScreen extends ScreenAdapter {
         } else {
             renderHud();
         }
+        inventoryOverlay.render(batch, mission);
     }
 
     private void handleGlobalInput() {
+        if (Gdx.input.isKeyJustPressed(Input.Keys.I) && !craftingMenuOpen) {
+            inventoryOverlay.toggle();
+            return;
+        }
+        if (inventoryOverlay.isOpen() && Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+            inventoryOverlay.toggle();
+            return;
+        }
         if (craftingMenuOpen && Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
             if (activeRecipe < 0) craftingMenuOpen = false;
             return;
@@ -254,6 +267,7 @@ public final class BaseInteriorScreen extends ScreenAdapter {
             GameConstants.VIRTUAL_WIDTH, GameConstants.VIRTUAL_HEIGHT);
         workbench.render(batch, nearWorkbench);
         player.render(batch);
+        player.renderEquipment(batch, mission);
         batch.end();
 
         Gdx.gl.glEnable(GL20.GL_BLEND);
@@ -450,11 +464,13 @@ public final class BaseInteriorScreen extends ScreenAdapter {
     @Override
     public void resize(int width, int height) {
         if (viewport != null) viewport.update(width, height, true);
+        if (inventoryOverlay != null) inventoryOverlay.resize(width, height);
     }
 
     @Override
     public void dispose() {
         if (shapes != null) shapes.dispose();
         if (fonts != null) fonts.close();
+        if (inventoryOverlay != null) inventoryOverlay.dispose();
     }
 }

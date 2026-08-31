@@ -11,6 +11,8 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
@@ -33,6 +35,9 @@ public class VictoryScreen extends ScreenAdapter {
     private final int score;
     private final int bestScore;
     private final boolean newRecord;
+    private final Rectangle restartButton = new Rectangle(86f, 105f, 276f, 58f);
+    private final Rectangle menuButton = new Rectangle(378f, 105f, 294f, 58f);
+    private final Vector2 pointer = new Vector2();
 
     private OrthographicCamera camera;
     private Viewport viewport;
@@ -89,6 +94,8 @@ public class VictoryScreen extends ScreenAdapter {
         resultReveal = MathUtils.lerp(resultReveal, 1f,
             1f - (float) Math.pow(0.00008f, safeDelta));
         displayedScore = Math.round(score * resultReveal);
+        updatePointer();
+        updateButtonPositions();
         handleInput();
         if (changingScreen) return;
         clear();
@@ -99,13 +106,16 @@ public class VictoryScreen extends ScreenAdapter {
     }
 
     private void handleInput() {
-        if (Gdx.input.isKeyJustPressed(Input.Keys.R)) {
+        boolean clicked = Gdx.input.justTouched();
+        if ((clicked && restartButton.contains(pointer))
+            || Gdx.input.isKeyJustPressed(Input.Keys.R)) {
             changingScreen = true;
             game.getAudio().playMenuClick();
             game.changeScreen(new LunarScreen(game));
             return;
         }
-        if (Gdx.input.isKeyJustPressed(Input.Keys.M)
+        if ((clicked && menuButton.contains(pointer))
+            || Gdx.input.isKeyJustPressed(Input.Keys.M)
             || Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
             changingScreen = true;
             game.getAudio().playMenuClick();
@@ -170,13 +180,8 @@ public class VictoryScreen extends ScreenAdapter {
         shapes.setColor(UiTheme.BORDER);
         shapes.rect(86f, 392f + yOff, 586f * resultReveal, 1f);
 
-        shapes.setColor(UiTheme.PANEL_LIGHT);
-        shapes.rect(86f, 105f + yOff, 276f, 58f);
-        shapes.rect(378f, 105f + yOff, 294f, 58f);
-        shapes.setColor(UiTheme.CYAN);
-        shapes.rect(86f, 105f + yOff, 4f, 58f);
-        shapes.setColor(UiTheme.BORDER);
-        shapes.rect(378f, 105f + yOff, 4f, 58f);
+        drawResultButton(restartButton, restartButton.contains(pointer), UiTheme.CYAN);
+        drawResultButton(menuButton, menuButton.contains(pointer), UiTheme.CYAN_SOFT);
         shapes.end();
         disableBlend();
     }
@@ -213,14 +218,12 @@ public class VictoryScreen extends ScreenAdapter {
         set(fonts.body, UiTheme.TEXT);
         fonts.body.draw(batch, "AGUA  " + water + "     H2  " + fuel, 86f, 202f + yOff);
 
-        set(fonts.label, UiTheme.CYAN);
-        fonts.label.draw(batch, "[ R ]", 108f, 141f + yOff);
-        set(fonts.label, UiTheme.TEXT);
-        fonts.label.draw(batch, "NOVA MISSAO", 170f, 141f + yOff);
-        set(fonts.label, UiTheme.CYAN_SOFT);
-        fonts.label.draw(batch, "[ M ]", 400f, 141f + yOff);
-        set(fonts.label, UiTheme.TEXT);
-        fonts.label.draw(batch, "MENU PRINCIPAL", 462f, 141f + yOff);
+        set(fonts.label, restartButton.contains(pointer) ? UiTheme.CYAN : UiTheme.TEXT);
+        fonts.label.draw(batch, "NOVA MISSAO", restartButton.x,
+            restartButton.y + 37f, restartButton.width, Align.center, false);
+        set(fonts.label, menuButton.contains(pointer) ? UiTheme.CYAN_SOFT : UiTheme.TEXT);
+        fonts.label.draw(batch, "MENU PRINCIPAL", menuButton.x,
+            menuButton.y + 37f, menuButton.width, Align.center, false);
 
         set(fonts.micro, UiTheme.CYAN_SOFT);
         fonts.micro.draw(batch, "ROTA LUA > MARTE // ESTAVEL", 850f, 640f);
@@ -234,6 +237,26 @@ public class VictoryScreen extends ScreenAdapter {
         fonts.micro.draw(batch, label, x, 337f + yOff);
         set(fonts.heading, UiTheme.TEXT);
         fonts.heading.draw(batch, value, x, 305f + yOff);
+    }
+
+    private void drawResultButton(Rectangle button, boolean hovered, Color accent) {
+        shapes.setColor(hovered ? 0.035f : 0.018f,
+            hovered ? 0.075f : 0.040f, hovered ? 0.10f : 0.058f, 0.98f);
+        shapes.rect(button.x, button.y, button.width, button.height);
+        shapes.setColor(accent.r, accent.g, accent.b, hovered ? 1f : 0.60f);
+        shapes.rect(button.x, button.y, 4f, button.height);
+        shapes.rect(button.x, button.y + button.height - 2f, button.width, 2f);
+    }
+
+    private void updatePointer() {
+        pointer.set(Gdx.input.getX(), Gdx.input.getY());
+        viewport.unproject(pointer);
+    }
+
+    private void updateButtonPositions() {
+        float y = 105f - 24f * (1f - resultReveal);
+        restartButton.y = y;
+        menuButton.y = y;
     }
 
     private String formatTime(float seconds) {

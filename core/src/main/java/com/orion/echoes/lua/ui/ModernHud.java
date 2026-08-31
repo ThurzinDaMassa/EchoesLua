@@ -10,6 +10,8 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
@@ -19,6 +21,7 @@ import com.orion.echoes.lua.enums.ItemType;
 import com.orion.echoes.lua.entities.Player;
 import com.orion.echoes.lua.entities.Portal;
 import com.orion.echoes.lua.entities.RepairStation;
+import com.orion.echoes.lua.entities.LootChest;
 import com.orion.echoes.lua.progress.MissionState;
 import com.orion.echoes.lua.systems.MissionSystem;
 import com.orion.echoes.lua.systems.PlayerStatus;
@@ -33,6 +36,10 @@ public class ModernHud {
     private final ShapeRenderer shapes;
     private final UiFonts fonts;
     private final GameAssets assets;
+    private final InventoryOverlay inventoryOverlay;
+    private final Vector2 pointer = new Vector2();
+    private final Rectangle overlayPrimary = new Rectangle(423f, 258f, 210f, 52f);
+    private final Rectangle overlaySecondary = new Rectangle(647f, 258f, 210f, 52f);
 
     private float animationTime;
     private boolean inventoryOpen;
@@ -49,6 +56,7 @@ public class ModernHud {
         camera.update();
         shapes = new ShapeRenderer();
         fonts = new UiFonts();
+        inventoryOverlay = new InventoryOverlay(assets);
     }
 
     public void render(
@@ -62,13 +70,17 @@ public class ModernHud {
         boolean paused,
         boolean missionFailed,
         RepairStation nearbyStation,
+        LootChest nearbyChest,
         boolean portalNearby
     ) {
         float delta = Math.min(Gdx.graphics.getDeltaTime(), 1f / 20f);
         animationTime += delta;
+        updatePointer();
         if (Gdx.input.isKeyJustPressed(Input.Keys.I)) {
-            inventoryOpen = !inventoryOpen;
+            inventoryOverlay.toggle();
+            inventoryOpen = inventoryOverlay.isOpen();
         }
+        inventoryOverlay.update(mission.getState());
         if (shownOxygen < 0f) {
             shownOxygen = status.getOxygen();
             shownHealth = status.getHealth();
@@ -82,10 +94,11 @@ public class ModernHud {
             1f - (float) Math.pow(0.0002f, delta));
         enableBlend();
         drawInterfaceShapes(status, baseEntranceNearby, mission, portal, paused,
-            missionFailed, nearbyStation, portalNearby);
+            missionFailed, nearbyStation, nearbyChest, portalNearby);
         drawInterfaceText(batch, status, player, baseEntranceNearby, mission, portal,
-            missionTime, nearbyStation, portalNearby);
+            missionTime, nearbyStation, nearbyChest, portalNearby);
         disableBlend();
+        inventoryOverlay.render(batch, mission.getState());
     }
 
     private void drawInterfaceShapes(
@@ -96,24 +109,25 @@ public class ModernHud {
         boolean paused,
         boolean missionFailed,
         RepairStation nearbyStation,
+        LootChest nearbyChest,
         boolean portalNearby
     ) {
         shapes.setProjectionMatrix(camera.combined);
         shapes.begin(ShapeRenderer.ShapeType.Filled);
 
-        UiTheme.panel(shapes, 24f, 642f, 246f, 54f,
+        UiTheme.panel(shapes, 24f, 624f, 246f, 72f,
             insideBase ? UiTheme.GREEN : UiTheme.CYAN);
-        UiTheme.panel(shapes, 288f, 642f, 682f, 54f, UiTheme.CYAN);
-        UiTheme.panel(shapes, 988f, 642f, 268f, 54f,
+        UiTheme.panel(shapes, 288f, 624f, 682f, 72f, UiTheme.CYAN);
+        UiTheme.panel(shapes, 988f, 624f, 268f, 72f,
             portal.isActive() ? UiTheme.PURPLE : UiTheme.CYAN_SOFT);
 
-        UiTheme.bar(shapes, 72f, 676f, 126f, 5f,
+        UiTheme.bar(shapes, 72f, 658f, 126f, 5f,
             shownOxygen / GameConstants.MAX_OXYGEN,
             oxygenColor(status.getOxygen()));
-        UiTheme.bar(shapes, 72f, 660f, 126f, 5f,
+        UiTheme.bar(shapes, 72f, 643f, 126f, 5f,
             shownHealth / GameConstants.MAX_HEALTH,
             status.getHealth() < 30f ? UiTheme.DANGER : UiTheme.GREEN);
-        UiTheme.bar(shapes, 72f, 644f, 126f, 5f,
+        UiTheme.bar(shapes, 72f, 628f, 126f, 5f,
             shownEnergy / GameConstants.MAX_ENERGY,
             UiTheme.GREEN);
 
@@ -122,7 +136,7 @@ public class ModernHud {
             + (state.hasWeapon() ? 1f : 0f)
             + MathUtils.clamp(state.getEnemiesDefeated()
                 / (float) MissionState.LUNAR_ENEMY_TARGET, 0f, 1f)) / 3f;
-        UiTheme.bar(shapes, 1008f, 650f, 226f, 5f, missionProgress,
+        UiTheme.bar(shapes, 1008f, 632f, 226f, 5f, missionProgress,
             portal.isActive() ? UiTheme.PURPLE : UiTheme.CYAN);
 
         shapes.setColor(0.004f, 0.012f, 0.018f, 0.82f);
@@ -133,22 +147,9 @@ public class ModernHud {
         UiTheme.panel(shapes, 1000f, 20f, 256f, 34f,
             inventoryOpen ? UiTheme.GREEN : UiTheme.CYAN_SOFT);
 
-        if (inventoryReveal > 0.02f) {
-            float drawerX = WIDTH - 300f * inventoryReveal;
-            UiTheme.panel(shapes, drawerX, 302f, 280f, 320f, UiTheme.CYAN_SOFT);
-            for (int i = 0; i < ItemType.values().length; i++) {
-                int column = i % 2;
-                int row = i / 2;
-                float cellX = drawerX + 16f + column * 122f;
-                float cellY = 526f - row * 38f;
-                shapes.setColor(0.018f, 0.035f, 0.045f, 0.94f);
-                shapes.rect(cellX, cellY, 114f, 32f);
-                shapes.setColor(UiTheme.BORDER);
-                shapes.rect(cellX, cellY, 114f, 1f);
-            }
-        }
-
-        if (nearbyStation != null) {
+        if (nearbyChest != null && !nearbyChest.isOpened()) {
+            UiTheme.panel(shapes, 294f, 20f, 686f, 62f, UiTheme.WARNING);
+        } else if (nearbyStation != null) {
             UiTheme.panel(shapes, 294f, 20f, 686f, 62f,
                 state.isRepaired(nearbyStation.getType()) ? UiTheme.GREEN : UiTheme.CYAN);
         } else if (portalNearby) {
@@ -178,6 +179,11 @@ public class ModernHud {
             shapes.rect(0f, 0f, WIDTH, HEIGHT);
             UiTheme.panel(shapes, 385f, 220f, 510f, 280f,
                 missionFailed ? UiTheme.DANGER : UiTheme.CYAN);
+            drawOverlayButton(overlayPrimary,
+                missionFailed ? UiTheme.DANGER : UiTheme.CYAN,
+                overlayPrimary.contains(pointer));
+            drawOverlayButton(overlaySecondary, UiTheme.CYAN_SOFT,
+                overlaySecondary.contains(pointer));
         }
 
         shapes.end();
@@ -203,52 +209,49 @@ public class ModernHud {
         Portal portal,
         float missionTime,
         RepairStation nearbyStation,
+        LootChest nearbyChest,
         boolean portalNearby
     ) {
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
 
         label(fonts.micro, UiTheme.CYAN_SOFT);
-        fonts.micro.draw(batch, "EVA-01 // TELEMETRIA", 40f, 687f);
+        fonts.micro.draw(batch, "EVA-01 // TELEMETRIA", 40f, 683f);
 
         label(fonts.micro, UiTheme.MUTED);
-        fonts.micro.draw(batch, "O2", 40f, 678f);
-        fonts.micro.draw(batch, "HP", 40f, 662f);
-        fonts.micro.draw(batch, "EN", 40f, 646f);
+        fonts.micro.draw(batch, "O2", 40f, 662f);
+        fonts.micro.draw(batch, "HP", 40f, 647f);
+        fonts.micro.draw(batch, "EN", 40f, 632f);
 
         label(fonts.micro, UiTheme.TEXT);
-        fonts.micro.draw(batch, Math.round(status.getOxygen()) + "%", 202f, 678f,
+        fonts.micro.draw(batch, Math.round(status.getOxygen()) + "%", 202f, 662f,
             44f, Align.right, false);
-        fonts.micro.draw(batch, Math.round(status.getHealth()) + "%", 202f, 662f,
+        fonts.micro.draw(batch, Math.round(status.getHealth()) + "%", 202f, 647f,
             44f, Align.right, false);
-        fonts.micro.draw(batch, Math.round(status.getEnergy()) + "%", 202f, 646f,
+        fonts.micro.draw(batch, Math.round(status.getEnergy()) + "%", 202f, 632f,
             44f, Align.right, false);
 
         MissionState state = mission.getState();
 
         label(fonts.label, UiTheme.CYAN_SOFT);
         fonts.label.draw(batch, "ETAPA " + state.getLunarStage() + "/4 // "
-            + state.getStageTitle(), 308f, 681f);
+            + state.getStageTitle(), 308f, 678f);
         label(fonts.micro, UiTheme.MUTED);
-        fonts.micro.draw(batch, "T+" + formatTime(missionTime), 856f, 681f, 76f, Align.right, false);
+        fonts.micro.draw(batch, "T+" + formatTime(missionTime), 842f, 678f, 90f, Align.right, false);
 
         label(fonts.label, UiTheme.TEXT);
         fonts.label.draw(batch, state.getStageInstruction(status.getOxygen()),
-            308f, 653f, 548f, Align.left, false);
+            308f, 646f, 548f, Align.left, false);
         Texture requestedIcon = getRequestedIcon(state);
-        batch.draw(requestedIcon, 920f, 649f, 34f, 34f);
+        batch.draw(requestedIcon, 914f, 638f, 42f, 42f);
 
         label(fonts.label, portal.isActive() ? UiTheme.PURPLE : UiTheme.CYAN_SOFT);
-        fonts.label.draw(batch, "PROGRESSO LUA", 1008f, 681f);
+        fonts.label.draw(batch, "PROGRESSO LUA", 1008f, 678f);
         label(fonts.micro, UiTheme.TEXT);
         fonts.micro.draw(batch, "R " + state.getRepairCount() + "/4   ARMA "
             + (state.hasWeapon() ? "ON" : state.getWeaponPartCount() + "/3")
             + "   H " + Math.min(state.getEnemiesDefeated(), MissionState.LUNAR_ENEMY_TARGET)
-            + "/" + MissionState.LUNAR_ENEMY_TARGET, 1008f, 663f);
-
-        if (inventoryReveal > 0.02f) {
-            drawInventory(batch, state, WIDTH - 300f * inventoryReveal);
-        }
+            + "/" + MissionState.LUNAR_ENEMY_TARGET, 1008f, 651f);
 
         label(fonts.micro, UiTheme.MUTED);
         fonts.micro.draw(batch, "WASD  SHIFT  MOUSE  ESC", 40f, 41f);
@@ -257,7 +260,14 @@ public class ModernHud {
         fonts.micro.draw(batch, inventoryOpen ? "[ I ] FECHAR INVENTARIO"
             : "[ I ] ABRIR INVENTARIO", 1018f, 42f);
 
-        if (nearbyStation != null) {
+        if (nearbyChest != null && !nearbyChest.isOpened()) {
+            label(fonts.label, UiTheme.WARNING);
+            fonts.label.draw(batch, "[ E ] INSPECIONAR BAU DE SUPRIMENTOS",
+                338f, 65f, 640f, Align.center, false);
+            label(fonts.micro, UiTheme.MUTED);
+            fonts.micro.draw(batch, "CONTEUDO DESCONHECIDO // MATERIAIS DE FABRICACAO",
+                338f, 42f, 640f, Align.center, false);
+        } else if (nearbyStation != null) {
             boolean repaired = state.isRepaired(nearbyStation.getType());
             boolean repairing = nearbyStation.isRepairing();
             label(fonts.label, repaired ? UiTheme.GREEN
@@ -321,6 +331,14 @@ public class ModernHud {
             case OXYGEN -> assets.getOxygen();
             case FOOD -> assets.getFood();
             case ICE_ROCK -> assets.getIceRock();
+            case ALLOY_PLATE -> assets.getAlloyPlate();
+            case QUANTUM_CORE -> assets.getQuantumCore();
+            case FIBER_MESH -> assets.getFiberMesh();
+            case MINING_TOOL -> assets.getMiningTool();
+            case REPAIR_TOOL -> assets.getRepairTool();
+            case ARMOR_HELMET -> assets.getArmorHelmet();
+            case ARMOR_CHEST -> assets.getArmorChest();
+            case ARMOR_BOOTS -> assets.getArmorBoots();
         };
     }
 
@@ -383,6 +401,14 @@ public class ModernHud {
             case WEAPON_PART_A -> "ARMA A";
             case WEAPON_PART_B -> "ARMA B";
             case WEAPON_PART_C -> "ARMA C";
+            case ALLOY_PLATE -> "LIGA";
+            case QUANTUM_CORE -> "NUCLEO";
+            case FIBER_MESH -> "FIBRA";
+            case MINING_TOOL -> "PICA";
+            case REPAIR_TOOL -> "REPAR";
+            case ARMOR_HELMET -> "CAP";
+            case ARMOR_CHEST -> "PEIT";
+            case ARMOR_BOOTS -> "BOTAS";
         };
     }
 
@@ -399,6 +425,14 @@ public class ModernHud {
             case OXYGEN -> assets.getOxygen();
             case FOOD -> assets.getFood();
             case ICE_ROCK -> assets.getIceRock();
+            case ALLOY_PLATE -> assets.getAlloyPlate();
+            case QUANTUM_CORE -> assets.getQuantumCore();
+            case FIBER_MESH -> assets.getFiberMesh();
+            case MINING_TOOL -> assets.getMiningTool();
+            case REPAIR_TOOL -> assets.getRepairTool();
+            case ARMOR_HELMET -> assets.getArmorHelmet();
+            case ARMOR_CHEST -> assets.getArmorChest();
+            case ARMOR_BOOTS -> assets.getArmorBoots();
         };
     }
 
@@ -425,8 +459,8 @@ public class ModernHud {
         label(fonts.body, UiTheme.MUTED);
         fonts.body.draw(batch, "A telemetria foi temporariamente suspensa.", 0f, 365f,
             WIDTH, Align.center, false);
-        drawKeyLine(batch, "ESC", "RETOMAR MISSAO", 320f);
-        drawKeyLine(batch, "M", "ABORTAR E VOLTAR AO MENU", 282f);
+        drawButtonLabel(batch, "CONTINUAR", overlayPrimary, UiTheme.CYAN);
+        drawButtonLabel(batch, "VOLTAR AO MENU", overlaySecondary, UiTheme.CYAN_SOFT);
         batch.end();
     }
 
@@ -459,16 +493,37 @@ public class ModernHud {
         label(fonts.body, UiTheme.MUTED);
         fonts.body.draw(batch, "Reserva de oxigenio esgotada.", 0f, 365f,
             WIDTH, Align.center, false);
-        drawKeyLine(batch, "R", "REINICIAR PROTOCOLO", 320f);
-        drawKeyLine(batch, "M", "VOLTAR AO MENU", 282f);
+        drawButtonLabel(batch, "TENTAR NOVAMENTE", overlayPrimary, UiTheme.DANGER);
+        drawButtonLabel(batch, "MENU PRINCIPAL", overlaySecondary, UiTheme.CYAN_SOFT);
         batch.end();
     }
 
-    private void drawKeyLine(SpriteBatch batch, String key, String action, float y) {
-        label(fonts.label, UiTheme.CYAN);
-        fonts.label.draw(batch, "[ " + key + " ]", 470f, y);
-        label(fonts.label, UiTheme.TEXT);
-        fonts.label.draw(batch, action, 555f, y);
+    private void drawOverlayButton(Rectangle button, Color accent, boolean hovered) {
+        shapes.setColor(hovered ? 0.035f : 0.014f,
+            hovered ? 0.085f : 0.035f, hovered ? 0.11f : 0.05f, 0.98f);
+        shapes.rect(button.x, button.y, button.width, button.height);
+        shapes.setColor(accent.r, accent.g, accent.b, hovered ? 1f : 0.62f);
+        shapes.rect(button.x, button.y, 3f, button.height);
+        shapes.rect(button.x, button.y + button.height - 2f, button.width, 2f);
+    }
+
+    private void drawButtonLabel(SpriteBatch batch, String text, Rectangle button, Color accent) {
+        label(fonts.label, button.contains(pointer) ? accent : UiTheme.TEXT);
+        fonts.label.draw(batch, text, button.x, button.y + 34f,
+            button.width, Align.center, false);
+    }
+
+    public int pollOverlayAction() {
+        updatePointer();
+        if (!Gdx.input.justTouched()) return 0;
+        if (overlayPrimary.contains(pointer)) return 1;
+        if (overlaySecondary.contains(pointer)) return 2;
+        return 0;
+    }
+
+    private void updatePointer() {
+        pointer.set(Gdx.input.getX(), Gdx.input.getY());
+        viewport.unproject(pointer);
     }
 
     private String formatTime(float seconds) {
@@ -487,10 +542,14 @@ public class ModernHud {
 
     public void resize(int width, int height) {
         viewport.update(width, height, true);
+        inventoryOverlay.resize(width, height);
     }
+
+    public boolean isInventoryOpen() { return inventoryOverlay.isOpen(); }
 
     public void dispose() {
         shapes.dispose();
         fonts.close();
+        inventoryOverlay.dispose();
     }
 }

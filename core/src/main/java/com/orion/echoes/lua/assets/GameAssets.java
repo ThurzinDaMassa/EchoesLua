@@ -75,6 +75,19 @@ public class GameAssets {
         loadTexture(AssetPaths.WEAPON_PART_C);
         loadTexture(AssetPaths.EVA_WEAPON);
         loadTexture(AssetPaths.ENERGY_PROJECTILE);
+        loadTexture(AssetPaths.LOOT_CHEST_CLOSED);
+        loadTexture(AssetPaths.LOOT_CHEST_OPEN);
+        loadTexture(AssetPaths.ALLOY_PLATE);
+        loadTexture(AssetPaths.QUANTUM_CORE);
+        loadTexture(AssetPaths.FIBER_MESH);
+        loadTexture(AssetPaths.MINING_TOOL);
+        loadTexture(AssetPaths.REPAIR_TOOL);
+        loadTexture(AssetPaths.ARMOR_HELMET);
+        loadTexture(AssetPaths.ARMOR_CHEST);
+        loadTexture(AssetPaths.ARMOR_BOOTS);
+        loadTexture(AssetPaths.ARMOR_OVERLAY_HELMET);
+        loadTexture(AssetPaths.ARMOR_OVERLAY_CHEST);
+        loadTexture(AssetPaths.ARMOR_OVERLAY_BOOTS);
         loadTexture(AssetPaths.REPAIR_STATION);
         loadTexture(AssetPaths.REPAIR_STATION_BROKEN);
         loadTexture(AssetPaths.REPAIR_HAMMER);
@@ -164,6 +177,19 @@ public class GameAssets {
         setLinear(AssetPaths.WEAPON_PART_C);
         setLinear(AssetPaths.EVA_WEAPON);
         setLinear(AssetPaths.ENERGY_PROJECTILE);
+        setLinear(AssetPaths.LOOT_CHEST_CLOSED);
+        setLinear(AssetPaths.LOOT_CHEST_OPEN);
+        setLinear(AssetPaths.ALLOY_PLATE);
+        setLinear(AssetPaths.QUANTUM_CORE);
+        setLinear(AssetPaths.FIBER_MESH);
+        setLinear(AssetPaths.MINING_TOOL);
+        setLinear(AssetPaths.REPAIR_TOOL);
+        setLinear(AssetPaths.ARMOR_HELMET);
+        setLinear(AssetPaths.ARMOR_CHEST);
+        setLinear(AssetPaths.ARMOR_BOOTS);
+        setLinear(AssetPaths.ARMOR_OVERLAY_HELMET);
+        setLinear(AssetPaths.ARMOR_OVERLAY_CHEST);
+        setLinear(AssetPaths.ARMOR_OVERLAY_BOOTS);
         setLinear(AssetPaths.REPAIR_STATION);
         setLinear(AssetPaths.REPAIR_STATION_BROKEN);
         setLinear(AssetPaths.REPAIR_HAMMER);
@@ -281,6 +307,19 @@ public class GameAssets {
     public Texture getWeaponPartC() { return getTexture(AssetPaths.WEAPON_PART_C); }
     public Texture getEvaWeapon() { return getTexture(AssetPaths.EVA_WEAPON); }
     public Texture getEnergyProjectile() { return getTexture(AssetPaths.ENERGY_PROJECTILE); }
+    public Texture getLootChestClosed() { return getTexture(AssetPaths.LOOT_CHEST_CLOSED); }
+    public Texture getLootChestOpen() { return getTexture(AssetPaths.LOOT_CHEST_OPEN); }
+    public Texture getAlloyPlate() { return getTexture(AssetPaths.ALLOY_PLATE); }
+    public Texture getQuantumCore() { return getTexture(AssetPaths.QUANTUM_CORE); }
+    public Texture getFiberMesh() { return getTexture(AssetPaths.FIBER_MESH); }
+    public Texture getMiningTool() { return getTexture(AssetPaths.MINING_TOOL); }
+    public Texture getRepairTool() { return getTexture(AssetPaths.REPAIR_TOOL); }
+    public Texture getArmorHelmet() { return getTexture(AssetPaths.ARMOR_HELMET); }
+    public Texture getArmorChest() { return getTexture(AssetPaths.ARMOR_CHEST); }
+    public Texture getArmorBoots() { return getTexture(AssetPaths.ARMOR_BOOTS); }
+    public Texture getArmorOverlayHelmet() { return getTexture(AssetPaths.ARMOR_OVERLAY_HELMET); }
+    public Texture getArmorOverlayChest() { return getTexture(AssetPaths.ARMOR_OVERLAY_CHEST); }
+    public Texture getArmorOverlayBoots() { return getTexture(AssetPaths.ARMOR_OVERLAY_BOOTS); }
     public Texture getRepairStation() { return getTexture(AssetPaths.REPAIR_STATION); }
     public Texture getRepairStationBroken() { return getTexture(AssetPaths.REPAIR_STATION_BROKEN); }
     public Texture getRepairHammer() { return getTexture(AssetPaths.REPAIR_HAMMER); }

@@ -42,7 +42,7 @@ public class CombatSystem {
         fireCooldown = Math.max(0f, fireCooldown - delta);
         blockedMessageCooldown = Math.max(0f, blockedMessageCooldown - delta);
 
-        boolean playerDamaged = updateEnemies(delta, player, status, enemies);
+        boolean playerDamaged = updateEnemies(delta, player, status, mission, enemies);
 
         aimDirection.set(aimX - player.getCenterX(), aimY - player.getCenterY());
         if (aimDirection.isZero(0.001f)) aimDirection.set(player.isFacingLeft() ? -1f : 1f, 0f);
@@ -62,12 +62,13 @@ public class CombatSystem {
     }
 
     private boolean updateEnemies(float delta, Player player, PlayerStatus status,
-                                  Array<Enemy> enemies) {
+                                  MissionState mission, Array<Enemy> enemies) {
         boolean damaged = false;
         for (Enemy enemy : enemies) {
             enemy.update(delta, player);
             if (enemy.overlaps(player) && contactCooldown <= 0f) {
-                status.removeHealth(18f * enemyDamageMultiplier);
+                float armorMultiplier = 1f - mission.getArmorProtection();
+                status.removeHealth(18f * enemyDamageMultiplier * armorMultiplier);
                 contactCooldown = 1.10f;
                 damaged = true;
             }

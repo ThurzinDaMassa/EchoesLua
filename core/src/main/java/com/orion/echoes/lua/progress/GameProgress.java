@@ -66,6 +66,20 @@ public class GameProgress {
         for (int i = 0; i < MissionState.MARS_SATELLITE_TARGET; i++) {
             preferences.putBoolean("save.marsSite." + i, mission.isMarsSiteScanned(i));
         }
+        for (int i = 0; i < MissionState.LUNAR_CHEST_COUNT; i++) {
+            preferences.putBoolean("save.lunarChest." + i, mission.isChestOpened(false, i));
+        }
+        for (int i = 0; i < MissionState.MARS_CHEST_COUNT; i++) {
+            preferences.putBoolean("save.marsChest." + i, mission.isChestOpened(true, i));
+        }
+        putItemType("save.equipped.helmet", mission.getEquippedHelmet());
+        putItemType("save.equipped.chest", mission.getEquippedChest());
+        putItemType("save.equipped.boots", mission.getEquippedBoots());
+        putItemType("save.equipped.mining", mission.getEquippedMiningTool());
+        putItemType("save.equipped.repair", mission.getEquippedRepairTool());
+        for (int i = 0; i < MissionState.INVENTORY_SIZE; i++) {
+            putItemType("save.inventorySlot." + i, mission.getInventorySlot(i));
+        }
         for (ItemType type : ItemType.values()) {
             preferences.putInteger("save.item." + type.name(), mission.getCount(type));
         }
@@ -104,6 +118,20 @@ public class GameProgress {
         mission.restoreWorldSeed(preferences.getLong("save.worldSeed", mission.getWorldSeed()));
         for (int i = 0; i < MissionState.MARS_SATELLITE_TARGET; i++) {
             mission.restoreMarsSite(i, preferences.getBoolean("save.marsSite." + i, false));
+        }
+        for (int i = 0; i < MissionState.LUNAR_CHEST_COUNT; i++) {
+            mission.restoreChest(false, i, preferences.getBoolean("save.lunarChest." + i, false));
+        }
+        for (int i = 0; i < MissionState.MARS_CHEST_COUNT; i++) {
+            mission.restoreChest(true, i, preferences.getBoolean("save.marsChest." + i, false));
+        }
+        mission.restoreEquipment(
+            readItemType("save.equipped.helmet"), readItemType("save.equipped.chest"),
+            readItemType("save.equipped.boots"), readItemType("save.equipped.mining"),
+            readItemType("save.equipped.repair"));
+        for (int i = 0; i < MissionState.INVENTORY_SIZE; i++) {
+            String key = "save.inventorySlot." + i;
+            if (preferences.contains(key)) mission.restoreInventorySlot(i, readItemType(key));
         }
         return mission;
     }
@@ -155,5 +183,19 @@ public class GameProgress {
     public void clearSavedMission() {
         preferences.putBoolean("save.exists", false);
         preferences.flush();
+    }
+
+    private void putItemType(String key, ItemType type) {
+        preferences.putString(key, type == null ? "" : type.name());
+    }
+
+    private ItemType readItemType(String key) {
+        String value = preferences.getString(key, "");
+        if (value.isBlank()) return null;
+        try {
+            return ItemType.valueOf(value);
+        } catch (IllegalArgumentException ignored) {
+            return null;
+        }
     }
 }

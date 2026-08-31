@@ -23,6 +23,7 @@ import com.orion.echoes.lua.entities.Enemy;
 import com.orion.echoes.lua.entities.Obstacle;
 import com.orion.echoes.lua.entities.CollectibleItem;
 import com.orion.echoes.lua.entities.MarsSatellite;
+import com.orion.echoes.lua.entities.LootChest;
 import com.orion.echoes.lua.enums.ItemType;
 import com.orion.echoes.lua.effects.ParticleManager;
 import com.orion.echoes.lua.progress.MissionState;
@@ -33,6 +34,7 @@ import com.orion.echoes.lua.systems.CollectionSystem;
 import com.orion.echoes.lua.systems.ObstacleSystem;
 import com.orion.echoes.lua.ui.UiFonts;
 import com.orion.echoes.lua.ui.UiTheme;
+import com.orion.echoes.lua.ui.InventoryOverlay;
 import com.orion.echoes.lua.utils.GameConstants;
 
 /** Destino jogável da progressão lunar. Mantém o estado conquistado na Lua. */
@@ -65,12 +67,15 @@ public class MarsScreen extends ScreenAdapter {
     private Array<Obstacle> obstacles;
     private Array<Enemy> enemies;
     private Array<CollectibleItem> items;
+    private Array<LootChest> lootChests;
+    private LootChest nearbyChest;
     private ParticleManager particles;
     private CombatSystem combat;
     private CollectionSystem collection;
     private ObstacleSystem obstacleSystem;
     private final Vector2 aimWorld = new Vector2();
     private boolean inventoryOpen;
+    private InventoryOverlay inventoryOverlay;
     private float repairSparkTimer;
     private float damageFlashTimer;
     private float inventoryReveal;
@@ -103,6 +108,7 @@ public class MarsScreen extends ScreenAdapter {
         batch = game.getBatch();
         shapes = new ShapeRenderer();
         fonts = new UiFonts();
+        inventoryOverlay = new InventoryOverlay(game.getAssets());
         camera = new OrthographicCamera();
         hudCamera = new OrthographicCamera();
         hudCamera.setToOrtho(false, GameConstants.VIRTUAL_WIDTH, GameConstants.VIRTUAL_HEIGHT);
@@ -135,6 +141,8 @@ public class MarsScreen extends ScreenAdapter {
         handleInput();
         if (changingScreen) return;
         updateHudAnimation(safeDelta);
+        inventoryOverlay.update(mission);
+        if (!inventoryOpen) {
         player.update(safeDelta, status);
         aimWorld.set(Gdx.input.getX(), Gdx.input.getY());
         viewport.unproject(aimWorld);
@@ -181,6 +189,7 @@ public class MarsScreen extends ScreenAdapter {
                 collectedItems, player, items, enemies);
         }
         updateCamera(safeDelta);
+        }
 
         Gdx.gl.glClearColor(0.035f, 0.008f, 0.008f, 1f);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
@@ -222,6 +231,15 @@ public class MarsScreen extends ScreenAdapter {
                 game.getAssets(), true));
         }
 
+        lootChests = new Array<>();
+        float[][] chestPositions = {{300f, 1180f}, {2180f, 280f}, {2960f, 1450f}};
+        for (int i = 0; i < chestPositions.length; i++) {
+            LootChest chest = new LootChest(i, chestPositions[i][0], chestPositions[i][1], true,
+                game.getAssets(), mission.isChestOpened(true, i));
+            lootChests.add(chest);
+            if (chest.isOpened()) chest.spawnLoot(items, game.getAssets());
+        }
+
         particles = new ParticleManager();
         combat = new CombatSystem(game.getAssets(), game.getSettings().getDifficulty());
         collection = new CollectionSystem();
@@ -230,7 +248,8 @@ public class MarsScreen extends ScreenAdapter {
 
     private void handleInput() {
         if (Gdx.input.isKeyJustPressed(Input.Keys.I)) {
-            inventoryOpen = !inventoryOpen;
+            inventoryOverlay.toggle();
+            inventoryOpen = inventoryOverlay.isOpen();
         }
         if (Gdx.input.isKeyJustPressed(Input.Keys.M) || Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
             changingScreen = true;
@@ -281,9 +300,24 @@ public class MarsScreen extends ScreenAdapter {
     }
 
     private void updateSatellites(float delta) {
+        nearbyChest = null;
+        for (LootChest chest : lootChests) {
+            chest.update(delta);
+            if (chest.isPlayerNear(player)) nearbyChest = chest;
+        }
+        if (nearbyChest != null && !nearbyChest.isOpened()
+            && Gdx.input.isKeyJustPressed(Input.Keys.E)) {
+            if (mission.openChest(true, nearbyChest.getIndex())) {
+                nearbyChest.markOpened();
+                nearbyChest.spawnLoot(items, game.getAssets());
+                particles.emitProcessingBurst(nearbyChest.getCenterX(), nearbyChest.getCenterY());
+                game.getAudio().playRepair();
+            }
+            return;
+        }
         nearbySatellite = null;
         for (MarsSatellite satellite : satellites) {
-            satellite.update(delta);
+            satellite.update(delta * (mission.getEquippedRepairTool() != null ? 1.35f : 1f));
             if (satellite.isPlayerNear(player)) nearbySatellite = satellite;
         }
 
@@ -359,6 +393,7 @@ public class MarsScreen extends ScreenAdapter {
             satellite.renderGlow(shapes,
                 mission.isMarsSiteScanned(satellite.getIndex()), satellite == nearbySatellite);
         }
+        for (LootChest chest : lootChests) chest.renderGlow(shapes, chest == nearbyChest);
         for (CollectibleItem item : items) item.renderGlow(shapes, false);
         shapes.end();
         Gdx.gl.glDisable(GL20.GL_BLEND);
@@ -386,6 +421,7 @@ public class MarsScreen extends ScreenAdapter {
         batch.setColor(Color.WHITE);
         batch.draw(marsBaseTexture, 790f, 395f, 680f, 454f);
         for (Obstacle obstacle : obstacles) obstacle.render(batch);
+        for (LootChest chest : lootChests) chest.render(batch);
         for (CollectibleItem item : items) item.render(batch);
         for (Enemy enemy : enemies) enemy.render(batch);
         combat.render(batch);
@@ -413,6 +449,7 @@ public class MarsScreen extends ScreenAdapter {
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
         player.render(batch);
+        player.renderEquipment(batch, mission);
         if (mission.hasWeapon()) player.renderWeapon(batch, aimWorld.x, aimWorld.y);
         batch.end();
     }
@@ -434,7 +471,9 @@ public class MarsScreen extends ScreenAdapter {
         UiTheme.bar(shapes, 1032f, 633f, 142f, 5f,
             shownEnergy / GameConstants.MAX_ENERGY, UiTheme.GREEN);
         UiTheme.panel(shapes, 24f, 22f, 520f, 52f, UiTheme.GREEN);
-        if (nearbySatellite != null) {
+        if (nearbyChest != null && !nearbyChest.isOpened()) {
+            UiTheme.panel(shapes, 562f, 22f, 388f, 52f, UiTheme.WARNING);
+        } else if (nearbySatellite != null) {
             UiTheme.panel(shapes, 562f, 22f, 388f, 52f,
                 mission.isMarsSiteScanned(nearbySatellite.getIndex()) ? UiTheme.GREEN : UiTheme.WARNING);
         }
@@ -488,7 +527,12 @@ public class MarsScreen extends ScreenAdapter {
         fonts.micro.draw(batch,
             mission.getRepairCount() + " reparos lunares  //  arma preservada  //  autosave ativo",
             44f, 37f);
-        if (nearbySatellite != null) {
+        if (nearbyChest != null && !nearbyChest.isOpened()) {
+            fonts.label.setColor(UiTheme.WARNING);
+            fonts.label.draw(batch, "[ E ] INSPECIONAR BAU", 582f, 54f);
+            fonts.micro.setColor(UiTheme.MUTED);
+            fonts.micro.draw(batch, "MATERIAIS MARCIANOS", 582f, 35f);
+        } else if (nearbySatellite != null) {
             int index = nearbySatellite.getIndex();
             fonts.label.setColor(mission.isMarsSiteScanned(index) ? UiTheme.GREEN : UiTheme.WARNING);
             fonts.label.draw(batch, nearbySatellite.isRepairing()
@@ -508,6 +552,7 @@ public class MarsScreen extends ScreenAdapter {
         batch.end();
         Gdx.gl.glDisable(GL20.GL_BLEND);
         renderDamageIndicator();
+        inventoryOverlay.render(batch, mission);
     }
 
     private void renderDamageIndicator() {
@@ -582,11 +627,13 @@ public class MarsScreen extends ScreenAdapter {
     @Override
     public void resize(int width, int height) {
         viewport.update(width, height, false);
+        inventoryOverlay.resize(width, height);
     }
 
     @Override
     public void dispose() {
         if (shapes != null) shapes.dispose();
         if (fonts != null) fonts.close();
+        if (inventoryOverlay != null) inventoryOverlay.dispose();
     }
 }

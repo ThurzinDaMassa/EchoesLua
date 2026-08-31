@@ -43,8 +43,6 @@ public final class UiTheme {
         shapes.setColor(accent.r, accent.g, accent.b, 0.94f);
         shapes.rect(x, y, 3f, height);
         shapes.rect(x, y + height - 3f, Math.min(54f, width * 0.24f), 3f);
-        shapes.setColor(accent.r, accent.g, accent.b, 0.15f);
-        shapes.rect(x + 3f, y + 1f, Math.min(88f, width * 0.36f), height - 2f);
     }
 
     public static void bar(
@@ -59,8 +57,6 @@ public final class UiTheme {
         float clamped = MathUtils.clamp(value, 0f, 1f);
         shapes.setColor(0.002f, 0.009f, 0.014f, 0.96f);
         shapes.rect(x, y, width, height);
-        shapes.setColor(color.r, color.g, color.b, 0.18f);
-        shapes.rect(x - 2f, y - 2f, width * clamped + 4f, height + 4f);
         shapes.setColor(color.r, color.g, color.b, 0.96f);
         shapes.rect(x, y, width * clamped, height);
         shapes.setColor(1f, 1f, 1f, 0.12f);

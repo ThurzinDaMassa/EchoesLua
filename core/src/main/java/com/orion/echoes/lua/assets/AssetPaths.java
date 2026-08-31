@@ -79,6 +79,19 @@ public final class AssetPaths {
     public static final String WEAPON_PART_C = "textures/weapon_part_c.png";
     public static final String EVA_WEAPON = "textures/eva_weapon.png";
     public static final String ENERGY_PROJECTILE = "textures/energy_projectile.png";
+    public static final String LOOT_CHEST_CLOSED = "textures/loot_chest_closed.png";
+    public static final String LOOT_CHEST_OPEN = "textures/loot_chest_open.png";
+    public static final String ALLOY_PLATE = "textures/item_alloy_plate.png";
+    public static final String QUANTUM_CORE = "textures/item_quantum_core.png";
+    public static final String FIBER_MESH = "textures/item_fiber_mesh.png";
+    public static final String MINING_TOOL = "textures/tool_mining_pickaxe.png";
+    public static final String REPAIR_TOOL = "textures/tool_repair_driver.png";
+    public static final String ARMOR_HELMET = "textures/armor_helmet.png";
+    public static final String ARMOR_CHEST = "textures/armor_chest.png";
+    public static final String ARMOR_BOOTS = "textures/armor_boots.png";
+    public static final String ARMOR_OVERLAY_HELMET = "textures/armor_overlay_helmet_v2.png";
+    public static final String ARMOR_OVERLAY_CHEST = "textures/armor_overlay_chest_v2.png";
+    public static final String ARMOR_OVERLAY_BOOTS = "textures/armor_overlay_boots_v2.png";
 
     public static final String REPAIR_STATION =
         "textures/repair_station.png";

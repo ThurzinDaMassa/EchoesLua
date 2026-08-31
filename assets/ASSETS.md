@@ -41,6 +41,19 @@ Os seguintes assets foram criados especificamente para os sistemas do Desafio 02
 | `ui/mission_intro_02_failure.png` | Ato 2: sala de operacoes lunar avariada |
 | `ui/mission_intro_03_deployment.png` | Ato 3: astronauta inicia a missao de superficie |
 | `sounds/player_damage.wav` | Impacto de dano no traje do astronauta |
+| `textures/loot_chest_closed.png` | Bau EVA fechado e inspecionavel na Lua e em Marte |
+| `textures/loot_chest_open.png` | Estado persistente do bau depois da abertura |
+| `textures/item_alloy_plate.png` | Placas de liga para receitas de ferramentas e armaduras |
+| `textures/item_quantum_core.png` | Nucleo raro usado em equipamentos avancados |
+| `textures/item_fiber_mesh.png` | Malha tecnica usada nas pecas de protecao |
+| `textures/tool_mining_pickaxe.png` | Ferramenta de mineracao equipavel |
+| `textures/tool_repair_driver.png` | Ferramenta EVA de reparo equipavel |
+| `textures/armor_helmet.png` | Capacete blindado equipavel e visivel no astronauta |
+| `textures/armor_chest.png` | Peitoral blindado equipavel e visivel no astronauta |
+| `textures/armor_boots.png` | Botas blindadas equipaveis e visiveis no astronauta |
+| `textures/armor_overlay_helmet_v2.png` | Aro modular ajustado aos quadros e a paleta de cada astronauta |
+| `textures/armor_overlay_chest_v2.png` | Placa toracica modular ancorada ao corpo animado |
+| `textures/armor_overlay_boots_v2.png` | Reforco inferior modular que acompanha a base dos pes |
 
 Os sprites usam fundo transparente. Cada item importante possui silhueta,
 material e leitura visual proprios, sem depender de simples trocas de cor.

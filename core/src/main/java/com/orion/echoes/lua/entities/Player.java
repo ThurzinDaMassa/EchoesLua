@@ -15,6 +15,7 @@ import com.orion.echoes.lua.assets.GameAssets;
 import com.orion.echoes.lua.config.AstronautType;
 import com.orion.echoes.lua.config.CharacterAnimationProfile;
 import com.orion.echoes.lua.systems.PlayerStatus;
+import com.orion.echoes.lua.progress.MissionState;
 import com.orion.echoes.lua.utils.GameConstants;
 
 public class Player {
@@ -28,6 +29,7 @@ public class Player {
     private final Vector2 previousPosition;
 
     private final Vector2 direction;
+    private final Vector2 equipmentAnchor = new Vector2();
 
     // =========================================================
     // COLISAO
@@ -42,11 +44,18 @@ public class Player {
     private final Sprite sprite;
 
     private final Sprite weaponSprite;
+    private final Sprite armorHelmetSprite;
+    private final Sprite armorChestSprite;
+    private final Sprite armorBootsSprite;
+    private final Sprite miningToolSprite;
+    private final Sprite repairToolSprite;
     private final TextureRegion[] locomotionFrames;
     private final CharacterAnimationProfile animationProfile;
+    private final AstronautType astronautType;
     private final float frameScale;
     private float animationClock;
     private int animationState = -1;
+    private int currentFrameIndex;
     private float fireAnimationTimer;
     private float craftAnimationTimer;
     private float damageFlashTimer;
@@ -79,6 +88,8 @@ public class Player {
     }
 
     public Player(float startX, float startY, GameAssets assets, AstronautType astronautType) {
+
+        this.astronautType = astronautType;
 
         position =
             new Vector2(
@@ -131,6 +142,12 @@ public class Player {
         weaponSprite.setSize(94f, 47f);
         weaponSprite.setOrigin(18f, 23.5f);
 
+        armorHelmetSprite = equipmentSprite(assets.getArmorOverlayHelmet(), 1f, 1f);
+        armorChestSprite = equipmentSprite(assets.getArmorOverlayChest(), 1f, 1f);
+        armorBootsSprite = equipmentSprite(assets.getArmorOverlayBoots(), 1f, 1f);
+        miningToolSprite = equipmentSprite(assets.getMiningTool(), 38f, 38f);
+        repairToolSprite = equipmentSprite(assets.getRepairTool(), 32f, 32f);
+
         moving = false;
 
         // As folhas de animacao novas foram desenhadas olhando para a direita.
@@ -142,6 +159,13 @@ public class Player {
         sprintExhausted = false;
 
         updateBounds();
+    }
+
+    private Sprite equipmentSprite(Texture texture, float width, float height) {
+        Sprite result = new Sprite(texture);
+        result.setSize(width, height);
+        result.setOriginCenter();
+        return result;
     }
 
     // =========================================================
@@ -346,6 +370,7 @@ public class Player {
         int row = !moving ? 0 : sprinting ? 2 : 1;
         int frame = ((int) animationClock) & 3;
         int frameIndex = row * 4 + frame;
+        currentFrameIndex = frameIndex;
         sprite.setRegion(locomotionFrames[frameIndex]);
 
         // Os proprios quadros ja possuem movimento. Manter o idle preso ao chao
@@ -542,6 +567,107 @@ public class Player {
         weaponSprite.setRotation(angle);
         weaponSprite.setFlip(false, aimLeft);
         weaponSprite.draw(batch);
+    }
+
+    /** Camadas leves de equipamento acompanham o corpo e a direcao do astronauta. */
+    public void renderEquipment(SpriteBatch batch, MissionState mission) {
+        if (mission == null) return;
+        ArmorFit fit = armorFit();
+        Color tint = armorTint();
+        if (mission.getEquippedChest() != null) {
+            drawAnchoredEquipment(batch, armorChestSprite, 192f, fit.chestY,
+                fit.chestWidth, fit.chestHeight, tint);
+        }
+        if (mission.getEquippedBoots() != null) {
+            drawAnchoredEquipment(batch, armorBootsSprite, 192f, fit.bootsY,
+                fit.bootsWidth, fit.bootsHeight, tint);
+        }
+        if (mission.getEquippedHelmet() != null) {
+            drawAnchoredEquipment(batch, armorHelmetSprite, 192f, fit.helmetY,
+                fit.helmetWidth, fit.helmetHeight, tint);
+        }
+        if (mission.getEquippedMiningTool() != null) {
+            drawAnchoredEquipment(batch, miningToolSprite, 126f, fit.toolY,
+                fit.toolSize, fit.toolSize, tint);
+        }
+        if (mission.getEquippedRepairTool() != null) {
+            drawAnchoredEquipment(batch, repairToolSprite, 132f, fit.toolY - 42f,
+                fit.toolSize * 0.82f, fit.toolSize * 0.82f, tint);
+        }
+    }
+
+    private void drawAnchoredEquipment(SpriteBatch batch, Sprite equipment,
+                                       float sourceX, float sourceY,
+                                       float width, float height, Color tint) {
+        Vector2 anchor = framePoint(sourceX, sourceY);
+        equipment.setSize(width, height);
+        equipment.setOriginCenter();
+        equipment.setPosition(anchor.x - width * 0.5f, anchor.y - height * 0.5f);
+        equipment.setFlip(facingLeft, false);
+        equipment.setRotation(sprite.getRotation());
+        float alpha = damageFlashTimer > 0f ? 0.80f : 0.94f;
+        equipment.setColor(tint.r, tint.g, tint.b, alpha);
+        equipment.draw(batch);
+    }
+
+    private Vector2 framePoint(float sourceX, float sourceYFromTop) {
+        float mappedX = facingLeft ? CharacterAnimationProfile.FRAME_WIDTH - sourceX : sourceX;
+        float localX = mappedX * frameScale;
+        float localY = (CharacterAnimationProfile.FRAME_HEIGHT - sourceYFromTop) * frameScale;
+        float dx = localX - sprite.getOriginX();
+        float dy = localY - sprite.getOriginY();
+        float radians = sprite.getRotation() * MathUtils.degreesToRadians;
+        float rotatedX = dx * MathUtils.cos(radians) - dy * MathUtils.sin(radians);
+        float rotatedY = dx * MathUtils.sin(radians) + dy * MathUtils.cos(radians);
+        return equipmentAnchor.set(sprite.getX() + sprite.getOriginX() + rotatedX,
+            sprite.getY() + sprite.getOriginY() + rotatedY);
+    }
+
+    private ArmorFit armorFit() {
+        float actionOffset = currentFrameIndex >= 8 ? 3f : currentFrameIndex >= 4 ? 1f : 0f;
+        return switch (astronautType) {
+            case TRIPLE_T -> new ArmorFit(94f + actionOffset, 166f + actionOffset,
+                302f, 46f, 42f, 35f, 37f, 44f, 18f, 25f, 205f);
+            case WINSTON -> new ArmorFit(88f + actionOffset, 160f + actionOffset,
+                302f, 50f, 43f, 47f, 40f, 50f, 20f, 27f, 205f);
+            case SHREK -> new ArmorFit(91f + actionOffset, 168f + actionOffset,
+                302f, 52f, 44f, 46f, 39f, 50f, 20f, 27f, 208f);
+            case NEON -> new ArmorFit(92f + actionOffset, 171f + actionOffset,
+                303f, 39f, 37f, 31f, 42f, 42f, 17f, 22f, 210f);
+        };
+    }
+
+    private Color armorTint() {
+        return switch (astronautType) {
+            case TRIPLE_T -> new Color(1f, 0.90f, 0.76f, 1f);
+            case WINSTON -> new Color(1f, 0.95f, 0.67f, 1f);
+            case SHREK -> new Color(0.72f, 0.86f, 0.53f, 1f);
+            case NEON -> new Color(0.56f, 0.74f, 1f, 1f);
+        };
+    }
+
+    private static final class ArmorFit {
+        final float helmetY, chestY, bootsY;
+        final float helmetWidth, helmetHeight, chestWidth, chestHeight;
+        final float bootsWidth, bootsHeight, toolSize, toolY;
+
+        ArmorFit(float helmetY, float chestY, float bootsY,
+                 float helmetWidth, float helmetHeight,
+                 float chestWidth, float chestHeight,
+                 float bootsWidth, float bootsHeight,
+                 float toolSize, float toolY) {
+            this.helmetY = helmetY;
+            this.chestY = chestY;
+            this.bootsY = bootsY;
+            this.helmetWidth = helmetWidth;
+            this.helmetHeight = helmetHeight;
+            this.chestWidth = chestWidth;
+            this.chestHeight = chestHeight;
+            this.bootsWidth = bootsWidth;
+            this.bootsHeight = bootsHeight;
+            this.toolSize = toolSize;
+            this.toolY = toolY;
+        }
     }
 
     public void setFacingTowards(float worldX) {

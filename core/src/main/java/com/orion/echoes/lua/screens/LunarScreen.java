@@ -22,6 +22,7 @@ import com.orion.echoes.lua.audio.AudioManager;
 import com.orion.echoes.lua.effects.ParticleManager;
 import com.orion.echoes.lua.entities.CollectibleItem;
 import com.orion.echoes.lua.entities.LunarBase;
+import com.orion.echoes.lua.entities.LootChest;
 import com.orion.echoes.lua.entities.Obstacle;
 import com.orion.echoes.lua.entities.Player;
 import com.orion.echoes.lua.entities.Portal;
@@ -67,6 +68,7 @@ public class LunarScreen extends ScreenAdapter {
     private Array<Obstacle> obstacles;
 
     private Array<RepairStation> repairStations;
+    private Array<LootChest> lootChests;
 
     private Array<Enemy> enemies;
 
@@ -89,6 +91,7 @@ public class LunarScreen extends ScreenAdapter {
     private final Vector2 aimWorld = new Vector2();
 
     private RepairStation nearbyStation;
+    private LootChest nearbyChest;
 
     private ModernHud hud;
     private MissionProtocolOverlay protocolOverlay;
@@ -268,6 +271,11 @@ public class LunarScreen extends ScreenAdapter {
             );
 
         createItems();
+        createLootChests();
+
+        for (LootChest chest : lootChests) {
+            if (chest.isOpened()) chest.spawnLoot(items, game.getAssets());
+        }
 
         if (restoring) {
             game.getProgress().restoreWorld(items, enemies);
@@ -283,6 +291,17 @@ public class LunarScreen extends ScreenAdapter {
             resumedTime = 0f;
         }
 
+    }
+
+    private void createLootChests() {
+        lootChests = new Array<>();
+        float[][] positions = {
+            {1260f, 320f}, {1760f, 1220f}, {2200f, 460f}, {2860f, 1330f}
+        };
+        for (int i = 0; i < positions.length; i++) {
+            lootChests.add(new LootChest(i, positions[i][0], positions[i][1], false,
+                game.getAssets(), missionState.isChestOpened(false, i)));
+        }
     }
 
     private void createItems() {
@@ -544,6 +563,7 @@ public class LunarScreen extends ScreenAdapter {
 
         if (
             !paused
+                && !hud.isInventoryOpen()
                 &&
                 !survivalSystem
                     .isMissionFailed()
@@ -599,6 +619,8 @@ public class LunarScreen extends ScreenAdapter {
                 .isMissionFailed()
         ) {
 
+            int overlayAction = hud.pollOverlayAction();
+
             if (
                 !defeatSoundPlayed
             ) {
@@ -608,7 +630,7 @@ public class LunarScreen extends ScreenAdapter {
                 defeatSoundPlayed = true;
             }
 
-            if (
+            if (overlayAction == 1 ||
                 Gdx.input.isKeyJustPressed(
                     Input.Keys.R
                 )
@@ -619,7 +641,7 @@ public class LunarScreen extends ScreenAdapter {
                 return;
             }
 
-            if (
+            if (overlayAction == 2 ||
                 Gdx.input.isKeyJustPressed(
                     Input.Keys.M
                 )
@@ -631,6 +653,19 @@ public class LunarScreen extends ScreenAdapter {
             }
 
             return;
+        }
+
+        if (paused) {
+            int overlayAction = hud.pollOverlayAction();
+            if (overlayAction == 1) {
+                paused = false;
+                audio.resumeAmbientMusic();
+                return;
+            }
+            if (overlayAction == 2) {
+                returnToMenu();
+                return;
+            }
         }
 
         if (
@@ -700,6 +735,8 @@ public class LunarScreen extends ScreenAdapter {
                 delta
             );
         }
+
+        for (LootChest chest : lootChests) chest.update(delta);
 
         portal.update(
             delta
@@ -811,6 +848,21 @@ public class LunarScreen extends ScreenAdapter {
     }
 
     private void updateMissionInteractions(float delta) {
+        nearbyChest = null;
+        for (LootChest chest : lootChests) {
+            if (chest.isPlayerNear(player)) nearbyChest = chest;
+        }
+        if (nearbyChest != null && !nearbyChest.isOpened()
+            && Gdx.input.isKeyJustPressed(Input.Keys.E)) {
+            if (missionState.openChest(false, nearbyChest.getIndex())) {
+                nearbyChest.markOpened();
+                nearbyChest.spawnLoot(items, game.getAssets());
+                particleManager.emitProcessingBurst(nearbyChest.getCenterX(), nearbyChest.getCenterY());
+                audio.playRepair();
+            }
+            return;
+        }
+
         if (lunarBase.isPlayerNearEntrance(player)
             && Gdx.input.isKeyJustPressed(Input.Keys.E)) {
             goToBaseInterior();
@@ -819,7 +871,7 @@ public class LunarScreen extends ScreenAdapter {
 
         nearbyStation = null;
         for (RepairStation station : repairStations) {
-            station.update(delta);
+            station.update(delta * (missionState.getEquippedRepairTool() != null ? 1.35f : 1f));
             if (station.isPlayerNear(player)) nearbyStation = station;
         }
 
@@ -1282,6 +1334,8 @@ public class LunarScreen extends ScreenAdapter {
             lunarBase.isPlayerNearEntrance(player)
         );
 
+        for (LootChest chest : lootChests) chest.render(batch);
+
         for (RepairStation station : repairStations) {
             station.render(batch, missionState.isRepaired(station.getType()));
         }
@@ -1336,6 +1390,8 @@ public class LunarScreen extends ScreenAdapter {
             );
         }
 
+        for (LootChest chest : lootChests) chest.renderGlow(shapeRenderer, chest == nearbyChest);
+
         for (Enemy enemy : enemies) {
             enemy.renderStatus(shapeRenderer);
         }
@@ -1363,6 +1419,8 @@ public class LunarScreen extends ScreenAdapter {
             batch
         );
 
+        player.renderEquipment(batch, missionState);
+
         if (missionState.hasWeapon()) {
             player.renderWeapon(batch, aimWorld.x, aimWorld.y);
         }
@@ -1384,6 +1442,7 @@ public class LunarScreen extends ScreenAdapter {
             survivalSystem
                 .isMissionFailed(),
             nearbyStation,
+            nearbyChest,
             portal.isPlayerNear(player)
         );
     }

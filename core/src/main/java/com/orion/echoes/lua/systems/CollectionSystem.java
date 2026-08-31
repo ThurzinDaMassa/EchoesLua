@@ -85,7 +85,7 @@ public class CollectionSystem {
             case ICE_ROCK:
 
                 status.addIce(
-                    1
+                    missionState.getEquippedMiningTool() != null ? 2 : 1
                 );
 
                 break;

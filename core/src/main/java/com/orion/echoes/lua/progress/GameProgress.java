@@ -54,6 +54,8 @@ public class GameProgress {
         preferences.putInteger("save.collected", collectedItems);
         preferences.putFloat("save.playerX", player.getX());
         preferences.putFloat("save.playerY", player.getY());
+        preferences.putFloat("save.position." + scene + ".x", player.getX());
+        preferences.putFloat("save.position." + scene + ".y", player.getY());
         preferences.putFloat("save.oxygen", status.getOxygen());
         preferences.putFloat("save.energy", status.getEnergy());
         preferences.putFloat("save.health", status.getHealth());
@@ -61,6 +63,8 @@ public class GameProgress {
         preferences.putInteger("save.water", status.getWater());
         preferences.putInteger("save.fuel", status.getFuel());
         preferences.putBoolean("save.weapon", mission.hasWeapon());
+        preferences.putInteger("save.magazine", mission.getMagazineAmmo());
+        preferences.putBoolean("save.marsStorage", mission.hasMarsStorage());
         preferences.putInteger("save.kills", mission.getEnemiesDefeated());
         preferences.putLong("save.worldSeed", mission.getWorldSeed());
         for (int i = 0; i < MissionState.MARS_SATELLITE_TARGET; i++) {
@@ -80,22 +84,28 @@ public class GameProgress {
         for (int i = 0; i < MissionState.INVENTORY_SIZE; i++) {
             putItemType("save.inventorySlot." + i, mission.getInventorySlot(i));
         }
+        for (int i = 0; i < MissionState.MARS_STORAGE_SIZE; i++) {
+            putItemType("save.storageSlot." + i, mission.getStorageSlot(i));
+        }
         for (ItemType type : ItemType.values()) {
             preferences.putInteger("save.item." + type.name(), mission.getCount(type));
+            preferences.putInteger("save.stored." + type.name(), mission.getStoredCount(type));
         }
         for (RepairType type : RepairType.values()) {
             preferences.putBoolean("save.repair." + type.name(), mission.isRepaired(type));
         }
         if (worldItems != null) {
-            preferences.putInteger("save.worldItems", worldItems.size);
+            String worldKey = "save.world." + scene;
+            preferences.putInteger(worldKey + ".items", worldItems.size);
             for (int i = 0; i < worldItems.size; i++) {
-                preferences.putBoolean("save.worldItem." + i, worldItems.get(i).isCollected());
+                preferences.putBoolean(worldKey + ".item." + i, worldItems.get(i).isCollected());
             }
         }
         if (enemies != null) {
-            preferences.putInteger("save.enemies", enemies.size);
+            String worldKey = "save.world." + scene;
+            preferences.putInteger(worldKey + ".enemies", enemies.size);
             for (int i = 0; i < enemies.size; i++) {
-                preferences.putBoolean("save.enemyDefeated." + i, !enemies.get(i).isAlive());
+                preferences.putBoolean(worldKey + ".enemyDefeated." + i, !enemies.get(i).isAlive());
             }
         }
         preferences.flush();
@@ -109,11 +119,15 @@ public class GameProgress {
         MissionState mission = new MissionState();
         for (ItemType type : ItemType.values()) {
             mission.restoreCount(type, preferences.getInteger("save.item." + type.name(), 0));
+            mission.restoreStoredCount(type, preferences.getInteger("save.stored." + type.name(), 0));
         }
         for (RepairType type : RepairType.values()) {
             mission.restoreRepair(type, preferences.getBoolean("save.repair." + type.name(), false));
         }
         mission.restoreWeapon(preferences.getBoolean("save.weapon", false));
+        mission.restoreMagazine(preferences.getInteger("save.magazine",
+            mission.hasWeapon() ? MissionState.MAGAZINE_SIZE : 0));
+        mission.restoreMarsStorage(preferences.getBoolean("save.marsStorage", false));
         mission.restoreEnemiesDefeated(preferences.getInteger("save.kills", 0));
         mission.restoreWorldSeed(preferences.getLong("save.worldSeed", mission.getWorldSeed()));
         for (int i = 0; i < MissionState.MARS_SATELLITE_TARGET; i++) {
@@ -132,6 +146,10 @@ public class GameProgress {
         for (int i = 0; i < MissionState.INVENTORY_SIZE; i++) {
             String key = "save.inventorySlot." + i;
             if (preferences.contains(key)) mission.restoreInventorySlot(i, readItemType(key));
+        }
+        for (int i = 0; i < MissionState.MARS_STORAGE_SIZE; i++) {
+            String key = "save.storageSlot." + i;
+            if (preferences.contains(key)) mission.restoreStorageSlot(i, readItemType(key));
         }
         return mission;
     }
@@ -169,15 +187,27 @@ public class GameProgress {
         return preferences.getFloat("save.playerY", fallback);
     }
 
-    public void restoreWorld(Array<CollectibleItem> items, Array<Enemy> enemies) {
-        int itemCount = Math.min(items.size, preferences.getInteger("save.worldItems", 0));
+    public void restoreWorld(String scene, Array<CollectibleItem> items, Array<Enemy> enemies) {
+        String worldKey = "save.world." + scene;
+        String itemCountKey = worldKey + ".items";
+        int itemCount = Math.min(items.size, preferences.getInteger(itemCountKey,
+            preferences.getInteger("save.worldItems", 0)));
         for (int i = 0; i < itemCount; i++) {
-            if (preferences.getBoolean("save.worldItem." + i, false)) items.get(i).collect();
+            String key = worldKey + ".item." + i;
+            if (preferences.getBoolean(key,
+                preferences.getBoolean("save.worldItem." + i, false))) items.get(i).collect();
         }
-        int enemyCount = Math.min(enemies.size, preferences.getInteger("save.enemies", 0));
+        int enemyCount = Math.min(enemies.size, preferences.getInteger(worldKey + ".enemies",
+            preferences.getInteger("save.enemies", 0)));
         for (int i = 0; i < enemyCount; i++) {
-            if (preferences.getBoolean("save.enemyDefeated." + i, false)) enemies.get(i).defeat();
+            String key = worldKey + ".enemyDefeated." + i;
+            if (preferences.getBoolean(key,
+                preferences.getBoolean("save.enemyDefeated." + i, false))) enemies.get(i).defeat();
         }
+    }
+
+    public void restoreWorld(Array<CollectibleItem> items, Array<Enemy> enemies) {
+        restoreWorld(getSavedScene(), items, enemies);
     }
 
     public void clearSavedMission() {

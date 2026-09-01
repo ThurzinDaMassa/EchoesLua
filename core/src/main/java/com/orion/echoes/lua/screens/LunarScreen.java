@@ -278,7 +278,7 @@ public class LunarScreen extends ScreenAdapter {
         }
 
         if (restoring) {
-            game.getProgress().restoreWorld(items, enemies);
+            game.getProgress().restoreWorld("LUA", items, enemies);
             player.setPosition(
                 game.getProgress().getSavedPlayerX(GameConstants.PLAYER_START_X),
                 game.getProgress().getSavedPlayerY(GameConstants.PLAYER_START_Y)
@@ -315,7 +315,8 @@ public class LunarScreen extends ScreenAdapter {
             ItemType.ICE_ROCK, ItemType.ICE_ROCK, ItemType.ICE_ROCK, ItemType.ICE_ROCK,
             ItemType.ANTENNA_PART, ItemType.ENERGY_PART,
             ItemType.EXTRACTION_PART, ItemType.GREENHOUSE_PART,
-            ItemType.WEAPON_PART_A, ItemType.WEAPON_PART_B, ItemType.WEAPON_PART_C
+            ItemType.WEAPON_PART_A, ItemType.WEAPON_PART_B, ItemType.WEAPON_PART_C,
+            ItemType.AMMO_CELL, ItemType.AMMO_CELL
         };
         for (int i = 0; i < distribution.length; i++) {
             Vector2 spawn = findSafeItemSpawn(random, i);
@@ -384,10 +385,10 @@ public class LunarScreen extends ScreenAdapter {
 
     private void createEnemies() {
         enemies = new Array<>();
-        enemies.add(new Enemy(1320f, 720f, game.getAssets()));
-        enemies.add(new Enemy(2060f, 1180f, game.getAssets()));
-        enemies.add(new Enemy(2670f, 760f, game.getAssets()));
-        enemies.add(new Enemy(1750f, 1510f, game.getAssets()));
+        enemies.add(new Enemy(1040f, 420f, game.getAssets(), Enemy.Behavior.PATROL));
+        enemies.add(new Enemy(2920f, 1620f, game.getAssets(), Enemy.Behavior.HUNTER));
+        enemies.add(new Enemy(3260f, 620f, game.getAssets(), Enemy.Behavior.PATROL));
+        enemies.add(new Enemy(860f, 1760f, game.getAssets(), Enemy.Behavior.HUNTER));
     }
 
     private void createObstacles() {
@@ -630,22 +631,14 @@ public class LunarScreen extends ScreenAdapter {
                 defeatSoundPlayed = true;
             }
 
-            if (overlayAction == 1 ||
-                Gdx.input.isKeyJustPressed(
-                    Input.Keys.R
-                )
-            ) {
+            if (overlayAction == 1) {
 
                 restartMission();
 
                 return;
             }
 
-            if (overlayAction == 2 ||
-                Gdx.input.isKeyJustPressed(
-                    Input.Keys.M
-                )
-            ) {
+            if (overlayAction == 2) {
 
                 returnToMenu();
 
@@ -666,6 +659,13 @@ public class LunarScreen extends ScreenAdapter {
                 returnToMenu();
                 return;
             }
+            return;
+        }
+
+        if (hud.isInventoryOpen()
+            && Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+            hud.closeInventory();
+            return;
         }
 
         if (
@@ -683,17 +683,6 @@ public class LunarScreen extends ScreenAdapter {
             } else {
                 audio.resumeAmbientMusic();
             }
-        }
-
-        if (
-            paused
-                &&
-                Gdx.input.isKeyJustPressed(
-                    Input.Keys.M
-                )
-        ) {
-
-            returnToMenu();
         }
 
         if (
@@ -762,6 +751,8 @@ public class LunarScreen extends ScreenAdapter {
         updateAimPosition();
         boolean firing = Gdx.input.isButtonPressed(Input.Buttons.LEFT)
             || Gdx.input.isKeyPressed(Input.Keys.SPACE);
+        if (Gdx.input.isKeyJustPressed(Input.Keys.R))
+            combatSystem.requestReload(missionState, audio);
         if (missionState.hasWeapon() && (firing || !player.isMoving())) {
             player.setFacingTowards(aimWorld.x);
         }
@@ -772,6 +763,7 @@ public class LunarScreen extends ScreenAdapter {
             playerStatus,
             missionState,
             enemies,
+            items,
             particleManager,
             audio,
             aimWorld.x,
@@ -853,12 +845,12 @@ public class LunarScreen extends ScreenAdapter {
             if (chest.isPlayerNear(player)) nearbyChest = chest;
         }
         if (nearbyChest != null && !nearbyChest.isOpened()
-            && Gdx.input.isKeyJustPressed(Input.Keys.E)) {
+            && Gdx.input.isKeyJustPressed(Input.Keys.F)) {
             if (missionState.openChest(false, nearbyChest.getIndex())) {
                 nearbyChest.markOpened();
                 nearbyChest.spawnLoot(items, game.getAssets());
                 particleManager.emitProcessingBurst(nearbyChest.getCenterX(), nearbyChest.getCenterY());
-                audio.playRepair();
+                audio.playChestOpen();
             }
             return;
         }
@@ -953,6 +945,9 @@ public class LunarScreen extends ScreenAdapter {
         }
 
         changingScreen = true;
+
+        game.getProgress().saveMission(missionState, playerStatus, "LUA",
+            missionTime, countCollectedItems(), player, items, enemies);
 
         audio.stopGameplayAudio();
 
@@ -1419,8 +1414,6 @@ public class LunarScreen extends ScreenAdapter {
             batch
         );
 
-        player.renderEquipment(batch, missionState);
-
         if (missionState.hasWeapon()) {
             player.renderWeapon(batch, aimWorld.x, aimWorld.y);
         }
@@ -1430,6 +1423,7 @@ public class LunarScreen extends ScreenAdapter {
 
     private void renderHud() {
 
+        hud.setWeaponReload(combatSystem.isReloading(), combatSystem.getReloadProgress());
         hud.render(
             batch,
             playerStatus,

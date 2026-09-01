@@ -16,6 +16,11 @@ public final class SoundPaths {
     public static final String ENEMY_HIT = "sounds/enemy_hit.wav";
     public static final String MEDKIT_PICKUP = "sounds/medkit_pickup.wav";
     public static final String PLAYER_DAMAGE = "sounds/player_damage.wav";
+    public static final String WEAPON_RELOAD_START = "sounds/weapon_reload_start.wav";
+    public static final String WEAPON_RELOAD_COMPLETE = "sounds/weapon_reload_complete.wav";
+    public static final String STORAGE_CHEST_OPEN = "sounds/storage_chest_open.wav";
+    public static final String INVENTORY_MOVE = "sounds/inventory_move.wav";
+    public static final String ENEMY_ALERT = "sounds/enemy_alert.wav";
 
     // =========================================================
     // COLETA

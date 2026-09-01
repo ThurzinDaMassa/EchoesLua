@@ -107,16 +107,13 @@ public class VictoryScreen extends ScreenAdapter {
 
     private void handleInput() {
         boolean clicked = Gdx.input.justTouched();
-        if ((clicked && restartButton.contains(pointer))
-            || Gdx.input.isKeyJustPressed(Input.Keys.R)) {
+        if (clicked && restartButton.contains(pointer)) {
             changingScreen = true;
             game.getAudio().playMenuClick();
             game.changeScreen(new LunarScreen(game));
             return;
         }
-        if ((clicked && menuButton.contains(pointer))
-            || Gdx.input.isKeyJustPressed(Input.Keys.M)
-            || Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+        if (clicked && menuButton.contains(pointer)) {
             changingScreen = true;
             game.getAudio().playMenuClick();
             game.changeScreen(new MenuScreen(game));

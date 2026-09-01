@@ -98,7 +98,7 @@ public class CollectionSystem {
                 break;
         }
 
-        missionState.collect(type);
+        missionState.collect(type, type == ItemType.AMMO_CELL ? 6 : 1);
 
         item.collect();
 

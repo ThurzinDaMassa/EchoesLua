@@ -24,6 +24,7 @@ public final class AssetPaths {
     public static final String LUNAR_SURFACE = "textures/lunar_surface_v2.png";
     public static final String BASE_INTERIOR = "textures/base_interior.png";
     public static final String CRAFTING_WORKBENCH = "textures/crafting_workbench.png";
+    public static final String MARS_STORAGE_CHEST = "textures/mars_storage_chest.png";
 
     // Pickups
     public static final String OXYGEN =

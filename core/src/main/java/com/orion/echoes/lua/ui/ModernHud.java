@@ -47,6 +47,8 @@ public class ModernHud {
     private float shownOxygen = -1f;
     private float shownHealth = -1f;
     private float shownEnergy = -1f;
+    private boolean weaponReloading;
+    private float weaponReloadProgress = 1f;
 
     public ModernHud(GameAssets assets) {
         this.assets = assets;
@@ -57,6 +59,11 @@ public class ModernHud {
         shapes = new ShapeRenderer();
         fonts = new UiFonts();
         inventoryOverlay = new InventoryOverlay(assets);
+    }
+
+    public void setWeaponReload(boolean reloading, float progress) {
+        weaponReloading = reloading;
+        weaponReloadProgress = MathUtils.clamp(progress, 0f, 1f);
     }
 
     public void render(
@@ -76,11 +83,17 @@ public class ModernHud {
         float delta = Math.min(Gdx.graphics.getDeltaTime(), 1f / 20f);
         animationTime += delta;
         updatePointer();
-        if (Gdx.input.isKeyJustPressed(Input.Keys.I)) {
+        boolean inventoryKey = Gdx.input.isKeyJustPressed(Input.Keys.E);
+        boolean closeKey = Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE);
+        if (inventoryOverlay.isOpen() && (inventoryKey || closeKey)) {
+            inventoryOverlay.close();
+        } else if (!paused && !missionFailed && inventoryKey
+            && !baseEntranceNearby && nearbyStation == null && !portalNearby) {
             inventoryOverlay.toggle();
-            inventoryOpen = inventoryOverlay.isOpen();
         }
+        inventoryOpen = inventoryOverlay.isOpen();
         inventoryOverlay.update(mission.getState());
+        inventoryOpen = inventoryOverlay.isOpen();
         if (shownOxygen < 0f) {
             shownOxygen = status.getOxygen();
             shownHealth = status.getHealth();
@@ -120,6 +133,13 @@ public class ModernHud {
         UiTheme.panel(shapes, 288f, 624f, 682f, 72f, UiTheme.CYAN);
         UiTheme.panel(shapes, 988f, 624f, 268f, 72f,
             portal.isActive() ? UiTheme.PURPLE : UiTheme.CYAN_SOFT);
+        UiTheme.panel(shapes, 1000f, 532f, 256f, 74f,
+            weaponReloading ? UiTheme.CYAN : UiTheme.WARNING);
+        if (weaponReloading) {
+            UiTheme.bar(shapes, 1090f, 540f, 142f, 5f,
+                weaponReloadProgress, UiTheme.CYAN);
+        }
+        UiTheme.panel(shapes, 1144f, 344f, 112f, 180f, UiTheme.CYAN_SOFT);
 
         UiTheme.bar(shapes, 72f, 658f, 126f, 5f,
             shownOxygen / GameConstants.MAX_OXYGEN,
@@ -253,16 +273,29 @@ public class ModernHud {
             + "   H " + Math.min(state.getEnemiesDefeated(), MissionState.LUNAR_ENEMY_TARGET)
             + "/" + MissionState.LUNAR_ENEMY_TARGET, 1008f, 651f);
 
+        batch.draw(assets.getEvaWeapon(), 1014f, 556f, 68f, 34f);
+        label(fonts.micro, weaponReloading ? UiTheme.CYAN : UiTheme.WARNING);
+        fonts.micro.draw(batch, weaponReloading ? "RECARREGANDO" : "ARMA EVA", 1090f, 590f);
+        label(fonts.label, UiTheme.TEXT);
+        fonts.label.draw(batch, state.getMagazineAmmo() + " / " + state.getReserveAmmo(),
+            1090f, 565f);
+        label(fonts.micro, UiTheme.MUTED);
+        fonts.micro.draw(batch, weaponReloading
+            ? Math.round(weaponReloadProgress * 100f) + "% // AGUARDE"
+            : "PENTE   RESERVA   [ R ] RECARREGAR", 1090f, 550f);
+
+        drawArmorStatus(batch, state);
+
         label(fonts.micro, UiTheme.MUTED);
         fonts.micro.draw(batch, "WASD  SHIFT  MOUSE  ESC", 40f, 41f);
 
         label(fonts.micro, inventoryOpen ? UiTheme.GREEN : UiTheme.CYAN_SOFT);
-        fonts.micro.draw(batch, inventoryOpen ? "[ I ] FECHAR INVENTARIO"
-            : "[ I ] ABRIR INVENTARIO", 1018f, 42f);
+        fonts.micro.draw(batch, inventoryOpen ? "[ E ] FECHAR INVENTARIO"
+            : "[ E ] ABRIR INVENTARIO", 1018f, 42f);
 
         if (nearbyChest != null && !nearbyChest.isOpened()) {
             label(fonts.label, UiTheme.WARNING);
-            fonts.label.draw(batch, "[ E ] INSPECIONAR BAU DE SUPRIMENTOS",
+            fonts.label.draw(batch, "[ F ] INSPECIONAR BAU DE SUPRIMENTOS",
                 338f, 65f, 640f, Align.center, false);
             label(fonts.micro, UiTheme.MUTED);
             fonts.micro.draw(batch, "CONTEUDO DESCONHECIDO // MATERIAIS DE FABRICACAO",
@@ -310,6 +343,23 @@ public class ModernHud {
         batch.end();
     }
 
+    private void drawArmorStatus(SpriteBatch batch, MissionState state) {
+        label(fonts.micro, UiTheme.CYAN_SOFT);
+        fonts.micro.draw(batch, "ARMADURA", 1154f, 506f);
+        ItemType[] armor = {ItemType.ARMOR_HELMET, ItemType.ARMOR_CHEST, ItemType.ARMOR_BOOTS};
+        for (int i = 0; i < armor.length; i++) {
+            boolean equipped = state.isEquipped(armor[i]);
+            Texture icon = getItemIcon(armor[i]);
+            if (equipped) batch.setColor(Color.WHITE);
+            else batch.setColor(0.30f, 0.38f, 0.42f, 0.45f);
+            batch.draw(icon, 1178f, 450f - i * 42f, 42f, 42f);
+        }
+        batch.setColor(Color.WHITE);
+        label(fonts.micro, state.getArmorProtection() > 0f ? UiTheme.GREEN : UiTheme.MUTED);
+        fonts.micro.draw(batch, Math.round(state.getArmorProtection() * 100f) + "%", 1154f, 360f,
+            92f, Align.center, false);
+    }
+
     private Texture getRequestedIcon(MissionState state) {
         ItemType requested = state.getRequestedItem();
         if (requested == null) {
@@ -327,6 +377,7 @@ public class ModernHud {
             case WEAPON_PART_A -> assets.getWeaponPartA();
             case WEAPON_PART_B -> assets.getWeaponPartB();
             case WEAPON_PART_C -> assets.getWeaponPartC();
+            case AMMO_CELL -> assets.getEnergyProjectile();
             case MEDKIT -> assets.getMedkit();
             case OXYGEN -> assets.getOxygen();
             case FOOD -> assets.getFood();
@@ -350,7 +401,7 @@ public class ModernHud {
         fonts.micro.draw(batch, "01  SISTEMAS       " + state.getRepairCount() + "/4", 44f, 550f);
 
         label(fonts.micro, state.hasWeapon() ? UiTheme.GREEN : UiTheme.TEXT);
-        String weaponState = state.hasWeapon() ? "ONLINE"
+        String weaponState = state.hasWeapon() ? "ONLINE  //  MUN " + state.getCount(ItemType.AMMO_CELL)
             : "A" + state.getCount(com.orion.echoes.lua.enums.ItemType.WEAPON_PART_A)
                 + " B" + state.getCount(com.orion.echoes.lua.enums.ItemType.WEAPON_PART_B)
                 + " C" + state.getCount(com.orion.echoes.lua.enums.ItemType.WEAPON_PART_C);
@@ -401,6 +452,7 @@ public class ModernHud {
             case WEAPON_PART_A -> "ARMA A";
             case WEAPON_PART_B -> "ARMA B";
             case WEAPON_PART_C -> "ARMA C";
+            case AMMO_CELL -> "MUN";
             case ALLOY_PLATE -> "LIGA";
             case QUANTUM_CORE -> "NUCLEO";
             case FIBER_MESH -> "FIBRA";
@@ -421,6 +473,7 @@ public class ModernHud {
             case WEAPON_PART_A -> assets.getWeaponPartA();
             case WEAPON_PART_B -> assets.getWeaponPartB();
             case WEAPON_PART_C -> assets.getWeaponPartC();
+            case AMMO_CELL -> assets.getEnergyProjectile();
             case MEDKIT -> assets.getMedkit();
             case OXYGEN -> assets.getOxygen();
             case FOOD -> assets.getFood();
@@ -546,6 +599,10 @@ public class ModernHud {
     }
 
     public boolean isInventoryOpen() { return inventoryOverlay.isOpen(); }
+    public void closeInventory() {
+        inventoryOverlay.close();
+        inventoryOpen = false;
+    }
 
     public void dispose() {
         shapes.dispose();

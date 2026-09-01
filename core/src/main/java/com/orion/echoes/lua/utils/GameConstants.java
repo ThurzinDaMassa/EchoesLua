@@ -16,8 +16,8 @@ public final class GameConstants {
     // MUNDO
     // =========================================================
 
-    public static final float WORLD_WIDTH = 3200f;
-    public static final float WORLD_HEIGHT = 1800f;
+    public static final float WORLD_WIDTH = 3800f;
+    public static final float WORLD_HEIGHT = 2200f;
 
     // =========================================================
     // JOGADOR

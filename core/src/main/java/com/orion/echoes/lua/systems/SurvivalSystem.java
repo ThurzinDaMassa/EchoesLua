@@ -102,7 +102,7 @@ public class SurvivalSystem {
     ) {
 
         if (
-            status.getOxygen() <= 0f || !status.isAlive()
+            status.getOxygen() <= 0f || status.getEnergy() <= 0f || !status.isAlive()
         ) {
 
             missionFailed = true;

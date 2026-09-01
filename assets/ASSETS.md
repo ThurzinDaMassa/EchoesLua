@@ -54,6 +54,12 @@ Os seguintes assets foram criados especificamente para os sistemas do Desafio 02
 | `textures/armor_overlay_helmet_v2.png` | Aro modular ajustado aos quadros e a paleta de cada astronauta |
 | `textures/armor_overlay_chest_v2.png` | Placa toracica modular ancorada ao corpo animado |
 | `textures/armor_overlay_boots_v2.png` | Reforco inferior modular que acompanha a base dos pes |
+| `textures/mars_storage_chest.png` | Bau pressurizado original renderizado dentro da Base Ares |
+| `sounds/weapon_reload_start.wav` | Travas mecanicas no inicio da recarga |
+| `sounds/weapon_reload_complete.wav` | Encaixe e confirmacao do novo pente |
+| `sounds/storage_chest_open.wav` | Servo e trava do bau interno |
+| `sounds/inventory_move.wav` | Retorno curto ao mover uma pilha entre slots |
+| `sounds/enemy_alert.wav` | Alerta de proximidade de ameaca hostil |
 
 Os sprites usam fundo transparente. Cada item importante possui silhueta,
 material e leitura visual proprios, sem depender de simples trocas de cor.

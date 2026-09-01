@@ -26,6 +26,7 @@ public class GameAssets {
         loadTexture(AssetPaths.LUNAR_SURFACE);
         loadTexture(AssetPaths.BASE_INTERIOR);
         loadTexture(AssetPaths.CRAFTING_WORKBENCH);
+        loadTexture(AssetPaths.MARS_STORAGE_CHEST);
 
         loadTexture(
             AssetPaths.OXYGEN
@@ -128,6 +129,7 @@ public class GameAssets {
         setLinear(AssetPaths.LUNAR_SURFACE);
         setLinear(AssetPaths.BASE_INTERIOR);
         setLinear(AssetPaths.CRAFTING_WORKBENCH);
+        setLinear(AssetPaths.MARS_STORAGE_CHEST);
 
         setLinear(
             AssetPaths.OXYGEN
@@ -244,6 +246,7 @@ public class GameAssets {
     public Texture getLunarSurface() { return getTexture(AssetPaths.LUNAR_SURFACE); }
     public Texture getBaseInterior() { return getTexture(AssetPaths.BASE_INTERIOR); }
     public Texture getCraftingWorkbench() { return getTexture(AssetPaths.CRAFTING_WORKBENCH); }
+    public Texture getMarsStorageChest() { return getTexture(AssetPaths.MARS_STORAGE_CHEST); }
 
     public Texture getOxygen() {
         return getTexture(

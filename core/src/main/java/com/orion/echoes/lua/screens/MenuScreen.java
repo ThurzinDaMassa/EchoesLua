@@ -37,10 +37,17 @@ public class MenuScreen extends ScreenAdapter {
     private final Rectangle instructionsButton = new Rectangle(86f, 194f, 420f, 56f);
     private final Rectangle optionsButton = new Rectangle(86f, 130f, 420f, 56f);
     private final Rectangle exitButton = new Rectangle(86f, 66f, 420f, 56f);
+    private final Rectangle continueSaveButton = new Rectangle(86f, 18f, 200f, 34f);
+    private final Rectangle newSaveButton = new Rectangle(298f, 18f, 208f, 34f);
+    private final Rectangle modalCloseButton = new Rectangle(500f, 124f, 280f, 44f);
     private final Rectangle[] difficultyButtons = {
         new Rectangle(86f, 330f, 128f, 42f),
         new Rectangle(225f, 330f, 128f, 42f),
         new Rectangle(364f, 330f, 142f, 42f)
+    };
+    private final Rectangle[] characterButtons = {
+        new Rectangle(650f, 10f, 128f, 34f), new Rectangle(786f, 10f, 128f, 34f),
+        new Rectangle(922f, 10f, 128f, 34f), new Rectangle(1058f, 10f, 128f, 34f)
     };
     private final float[] starX = new float[STAR_COUNT];
     private final float[] starY = new float[STAR_COUNT];
@@ -146,7 +153,7 @@ public class MenuScreen extends ScreenAdapter {
             return;
         }
         if (instructionsOpen) {
-            if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+            if (Gdx.input.justTouched() && modalCloseButton.contains(mouse)) {
                 instructionsOpen = false;
                 game.getAudio().playMenuClick();
             }
@@ -187,11 +194,27 @@ public class MenuScreen extends ScreenAdapter {
         }
         if (!Gdx.input.justTouched()) return;
 
+        if (game.getProgress().hasSavedMission() && continueSaveButton.contains(mouse)) {
+            continueGame();
+            return;
+        }
+        if (game.getProgress().hasSavedMission() && newSaveButton.contains(mouse)) {
+            startGame();
+            return;
+        }
+
         int difficultyChoice = difficultyAt(mouse);
         if (difficultyChoice >= 0) {
             game.getSettings().setDifficulty(Difficulty.values()[difficultyChoice]);
             game.getAudio().playMenuClick();
             return;
+        }
+        for (int i = 0; i < characterButtons.length; i++) {
+            if (characterButtons[i].contains(mouse)) {
+                game.getSettings().setAstronautType(AstronautType.values()[i]);
+                game.getAudio().playMenuClick();
+                return;
+            }
         }
 
         switch (buttonAt(mouse)) {
@@ -217,43 +240,42 @@ public class MenuScreen extends ScreenAdapter {
     }
 
     private void handleOptionsInput() {
-        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+        if (!Gdx.input.justTouched()) return;
+        if (modalCloseButton.contains(mouse)) {
             optionsOpen = false;
             game.getAudio().playMenuClick();
             return;
         }
-        if (Gdx.input.isKeyJustPressed(Input.Keys.LEFT)) {
+        if (optionMinus(455f).contains(mouse)) {
             game.getSettings().setDifficulty(game.getSettings().getDifficulty().previous());
             game.getAudio().playMenuClick();
-        }
-        if (Gdx.input.isKeyJustPressed(Input.Keys.RIGHT)) {
+        } else if (optionPlus(455f).contains(mouse)) {
             game.getSettings().setDifficulty(game.getSettings().getDifficulty().next());
             game.getAudio().playMenuClick();
-        }
-        if (Gdx.input.isKeyJustPressed(Input.Keys.UP)) {
-            game.getSettings().adjustMasterVolume(0.1f);
-            game.getSettings().applyTo(game.getAudio());
-            game.getAudio().playMenuClick();
-        }
-        if (Gdx.input.isKeyJustPressed(Input.Keys.DOWN)) {
+        } else if (optionMinus(405f).contains(mouse)) {
             game.getSettings().adjustMasterVolume(-0.1f);
-            game.getSettings().applyTo(game.getAudio());
-            game.getAudio().playMenuClick();
-        }
-        if (Gdx.input.isKeyJustPressed(Input.Keys.M)) {
+        } else if (optionPlus(405f).contains(mouse)) {
+            game.getSettings().adjustMasterVolume(0.1f);
+        } else if (optionMinus(355f).contains(mouse)) {
+            game.getSettings().adjustMusicVolume(-0.1f);
+        } else if (optionPlus(355f).contains(mouse)) {
+            game.getSettings().adjustMusicVolume(0.1f);
+        } else if (optionMinus(305f).contains(mouse)) {
+            game.getSettings().adjustSoundVolume(-0.1f);
+        } else if (optionPlus(305f).contains(mouse)) {
+            game.getSettings().adjustSoundVolume(0.1f);
+        } else if (optionToggle(255f).contains(mouse)) {
             game.getSettings().setMuted(!game.getSettings().isMuted());
-            game.getSettings().applyTo(game.getAudio());
-            game.getAudio().playMenuClick();
-        }
-        if (Gdx.input.isKeyJustPressed(Input.Keys.F)) {
+        } else if (optionToggle(205f).contains(mouse)) {
             game.getSettings().toggleFullscreen();
         }
-        if (Gdx.input.isKeyJustPressed(Input.Keys.Q)) game.getSettings().adjustMusicVolume(-0.1f);
-        if (Gdx.input.isKeyJustPressed(Input.Keys.E)) game.getSettings().adjustMusicVolume(0.1f);
-        if (Gdx.input.isKeyJustPressed(Input.Keys.Z)) game.getSettings().adjustSoundVolume(-0.1f);
-        if (Gdx.input.isKeyJustPressed(Input.Keys.X)) game.getSettings().adjustSoundVolume(0.1f);
         game.getSettings().applyTo(game.getAudio());
+        game.getAudio().playMenuClick();
     }
+
+    private Rectangle optionMinus(float y) { return new Rectangle(592f, y - 30f, 42f, 38f); }
+    private Rectangle optionPlus(float y) { return new Rectangle(892f, y - 30f, 42f, 38f); }
+    private Rectangle optionToggle(float y) { return new Rectangle(620f, y - 30f, 314f, 38f); }
 
     private void startGame() {
         if (changingScreen) return;
@@ -269,7 +291,11 @@ public class MenuScreen extends ScreenAdapter {
         game.getAudio().playMenuClick();
         MissionState mission = game.getProgress().loadMissionState();
         PlayerStatus status = game.getProgress().loadPlayerStatus();
-        if ("MARTE".equals(game.getProgress().getSavedScene())) {
+        if ("MARS_BASE".equals(game.getProgress().getSavedScene())) {
+            game.changeScreen(new MarsBaseInteriorScreen(game, mission, status,
+                game.getProgress().getSavedMissionTime(),
+                game.getProgress().getSavedCollectedItems()));
+        } else if ("MARTE".equals(game.getProgress().getSavedScene())) {
             game.changeScreen(new MarsScreen(game, mission, status,
                 game.getProgress().getSavedMissionTime(),
                 game.getProgress().getSavedCollectedItems(),
@@ -360,6 +386,18 @@ public class MenuScreen extends ScreenAdapter {
                     button.width - 3f, button.height - 2f);
             }
         }
+        if (game.getProgress().hasSavedMission()) {
+            UiTheme.panel(shapes, continueSaveButton.x, continueSaveButton.y,
+                continueSaveButton.width, continueSaveButton.height, UiTheme.GREEN);
+            UiTheme.panel(shapes, newSaveButton.x, newSaveButton.y,
+                newSaveButton.width, newSaveButton.height, UiTheme.WARNING);
+        }
+        for (int i = 0; i < characterButtons.length; i++) {
+            UiTheme.panel(shapes, characterButtons[i].x, characterButtons[i].y,
+                characterButtons[i].width, characterButtons[i].height,
+                game.getSettings().getAstronautType().ordinal() == i
+                    ? UiTheme.GREEN : UiTheme.CYAN_SOFT);
+        }
         shapes.end();
         disableBlend();
     }
@@ -415,18 +453,27 @@ public class MenuScreen extends ScreenAdapter {
         buttonText("CONFIGURACOES", "03", optionsButton);
         buttonText("ENCERRAR SISTEMA", "04", exitButton);
 
-        set(fonts.micro, UiTheme.MUTED);
-        fonts.micro.draw(batch, game.getProgress().hasSavedMission()
-            ? "ENTER NOVA   L CONTINUAR " + game.getProgress().getSavedScene() + "   DEL APAGAR SAVE"
-            : "ENTER  INICIAR", 68f, 25f);
+        if (game.getProgress().hasSavedMission()) {
+            set(fonts.micro, UiTheme.GREEN);
+            fonts.micro.draw(batch, "CONTINUAR " + game.getProgress().getSavedScene(),
+                continueSaveButton.x, 40f, continueSaveButton.width, Align.center, false);
+            set(fonts.micro, UiTheme.WARNING);
+            fonts.micro.draw(batch, "NOVA MISSAO", newSaveButton.x, 40f,
+                newSaveButton.width, Align.center, false);
+        }
         fonts.micro.draw(batch,
             "MODO " + game.getSettings().getDifficulty().getLabel()
                 + "   //   RECORDE " + game.getProgress().getBestScore(),
-            770f, 42f, 430f, Align.right, false);
+            770f, 62f, 430f, Align.right, false);
         set(fonts.micro, UiTheme.CYAN_SOFT);
         fonts.micro.draw(batch, "PORTAL DE EXTRACAO // ONLINE", 835f, 650f);
-        fonts.micro.draw(batch, "ASTRONAUTA  1 TRIPLE T  2 WINSTON  3 SHREK  4 NEON  //  "
-            + game.getSettings().getAstronautType().getLabel(), 650f, 18f, 560f, Align.right, false);
+        AstronautType[] astronauts = AstronautType.values();
+        for (int i = 0; i < characterButtons.length; i++) {
+            set(fonts.micro, game.getSettings().getAstronautType() == astronauts[i]
+                ? UiTheme.GREEN : UiTheme.TEXT);
+            fonts.micro.draw(batch, astronauts[i].getLabel(), characterButtons[i].x, 32f,
+                characterButtons[i].width, Align.center, false);
+        }
 
         batch.end();
     }
@@ -446,9 +493,9 @@ public class MenuScreen extends ScreenAdapter {
         batch.begin();
         instructionRow("WASD / SETAS", "MOVIMENTO", 451f);
         instructionRow("SHIFT", "CORRER // CONSOME ENERGIA", 403f);
-        instructionRow("E", "INTERAGIR / ENTRAR NA BASE / USAR BANCADA", 355f);
-        instructionRow("M", "ABRIR MENU E GERENCIAR O SAVE", 307f);
-        instructionRow("MOUSE / CLIQUE", "MIRAR / DISPARAR A ARMA", 259f);
+        instructionRow("E / F", "INVENTARIO E INTERACOES / ABRIR BAUS", 355f);
+        instructionRow("ESC", "PAUSAR E USAR OS BOTOES DA TELA", 307f);
+        instructionRow("MOUSE / R", "MIRAR, DISPARAR / RECARREGAR", 259f);
         set(fonts.label, UiTheme.CYAN);
         fonts.label.draw(batch, "OBJETIVO", 356f, 207f);
         set(fonts.body, UiTheme.TEXT);
@@ -467,29 +514,46 @@ public class MenuScreen extends ScreenAdapter {
 
     private void drawOptions() {
         drawModalBase("CONFIGURACOES", "PERFIL LOCAL // SALVAMENTO AUTOMATICO");
+        drawOptionControls();
         Difficulty difficulty = game.getSettings().getDifficulty();
         int volume = Math.round(game.getSettings().getMasterVolume() * 100f);
 
         batch.begin();
-        optionRow("DIFICULDADE", "<  " + difficulty.getLabel() + "  >", 455f);
+        optionRow("DIFICULDADE", difficulty.getLabel(), 455f);
         optionRow("VOLUME GERAL", volume + "%", 405f);
-        optionRow("MUSICA  Q / E", Math.round(game.getSettings().getMusicVolume() * 100f) + "%", 355f);
-        optionRow("EFEITOS  Z / X", Math.round(game.getSettings().getSoundVolume() * 100f) + "%", 305f);
+        optionRow("MUSICA", Math.round(game.getSettings().getMusicVolume() * 100f) + "%", 355f);
+        optionRow("EFEITOS", Math.round(game.getSettings().getSoundVolume() * 100f) + "%", 305f);
         optionRow("AUDIO", game.getSettings().isMuted() ? "DESATIVADO" : "ATIVO", 255f);
         optionRow("EXIBICAO", game.getSettings().isFullscreen() ? "TELA CHEIA" : "JANELA", 205f);
-        set(fonts.micro, UiTheme.MUTED);
-        fonts.micro.draw(batch,
-            "ESQ/DIR  DIFICULDADE    CIMA/BAIXO  VOLUME    M  AUDIO    F  EXIBICAO",
-            0f, 162f, WIDTH, Align.center, false);
+        set(fonts.label, UiTheme.TEXT);
+        for (float y : new float[]{455f, 405f, 355f, 305f}) {
+            fonts.label.draw(batch, "-", optionMinus(y).x, y - 3f, 42f, Align.center, false);
+            fonts.label.draw(batch, "+", optionPlus(y).x, y - 3f, 42f, Align.center, false);
+        }
         modalFooter("SALVAR E VOLTAR");
         batch.end();
+    }
+
+    private void drawOptionControls() {
+        enableBlend();
+        shapes.begin(ShapeRenderer.ShapeType.Filled);
+        for (float y : new float[]{455f, 405f, 355f, 305f}) {
+            UiTheme.panel(shapes, optionMinus(y).x, optionMinus(y).y, 42f, 38f, UiTheme.CYAN_SOFT);
+            UiTheme.panel(shapes, optionPlus(y).x, optionPlus(y).y, 42f, 38f, UiTheme.CYAN_SOFT);
+        }
+        UiTheme.panel(shapes, optionToggle(255f).x, optionToggle(255f).y,
+            optionToggle(255f).width, optionToggle(255f).height, UiTheme.GREEN);
+        UiTheme.panel(shapes, optionToggle(205f).x, optionToggle(205f).y,
+            optionToggle(205f).width, optionToggle(205f).height, UiTheme.CYAN);
+        shapes.end();
+        disableBlend();
     }
 
     private void optionRow(String name, String value, float y) {
         set(fonts.label, UiTheme.CYAN_SOFT);
         fonts.label.draw(batch, name, 356f, y);
         set(fonts.body, UiTheme.TEXT);
-        fonts.body.draw(batch, value, 620f, y, 300f, Align.right, false);
+        fonts.body.draw(batch, value, 650f, y, 220f, Align.center, false);
     }
 
     private void drawModalBase(String title, String subtitle) {
@@ -498,6 +562,9 @@ public class MenuScreen extends ScreenAdapter {
         shapes.setColor(0.002f, 0.006f, 0.010f, 0.88f);
         shapes.rect(0f, 0f, WIDTH, HEIGHT);
         UiTheme.panel(shapes, 270f, 112f, 740f, 496f, UiTheme.CYAN);
+        UiTheme.panel(shapes, modalCloseButton.x, modalCloseButton.y,
+            modalCloseButton.width, modalCloseButton.height,
+            modalCloseButton.contains(mouse) ? UiTheme.GREEN : UiTheme.CYAN_SOFT);
         shapes.setColor(UiTheme.BORDER);
         shapes.rect(334f, 498f, 612f, 1f);
         shapes.end();
@@ -512,9 +579,9 @@ public class MenuScreen extends ScreenAdapter {
     }
 
     private void modalFooter(String action) {
-        set(fonts.micro, UiTheme.MUTED);
-        fonts.micro.draw(batch, "[ ESC ]  " + action, 0f, 140f,
-            WIDTH, Align.center, false);
+        set(fonts.micro, modalCloseButton.contains(mouse) ? UiTheme.GREEN : UiTheme.TEXT);
+        fonts.micro.draw(batch, action, modalCloseButton.x, 151f,
+            modalCloseButton.width, Align.center, false);
     }
 
     private void set(BitmapFont font, Color color) {

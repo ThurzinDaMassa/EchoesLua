@@ -76,13 +76,13 @@ public final class LootChest {
     public void spawnLoot(Array<CollectibleItem> items, GameAssets assets) {
         if (lootSpawned) return;
         ItemType[][] lunarLoot = {
-            {ItemType.ALLOY_PLATE, ItemType.ALLOY_PLATE, ItemType.FIBER_MESH},
-            {ItemType.QUANTUM_CORE, ItemType.FIBER_MESH, ItemType.ALLOY_PLATE},
+            {ItemType.ALLOY_PLATE, ItemType.ALLOY_PLATE, ItemType.FIBER_MESH, ItemType.AMMO_CELL},
+            {ItemType.QUANTUM_CORE, ItemType.FIBER_MESH, ItemType.ALLOY_PLATE, ItemType.AMMO_CELL},
             {ItemType.FIBER_MESH, ItemType.FIBER_MESH, ItemType.ALLOY_PLATE},
             {ItemType.QUANTUM_CORE, ItemType.ALLOY_PLATE, ItemType.FIBER_MESH, ItemType.ALLOY_PLATE}
         };
         ItemType[][] marsLoot = {
-            {ItemType.ALLOY_PLATE, ItemType.QUANTUM_CORE, ItemType.FIBER_MESH},
+            {ItemType.ALLOY_PLATE, ItemType.QUANTUM_CORE, ItemType.FIBER_MESH, ItemType.AMMO_CELL},
             {ItemType.QUANTUM_CORE, ItemType.QUANTUM_CORE, ItemType.ALLOY_PLATE},
             {ItemType.FIBER_MESH, ItemType.ALLOY_PLATE, ItemType.ALLOY_PLATE, ItemType.QUANTUM_CORE}
         };

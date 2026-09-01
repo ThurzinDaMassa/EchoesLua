@@ -394,6 +394,8 @@ public class ParticleManager {
             case WEAPON_PART_B:
             case WEAPON_PART_C:
                 return new Color(0.78f, 0.34f, 1f, 1f);
+            case AMMO_CELL:
+                return new Color(1f, 0.42f, 0.14f, 1f);
             default:
                 return Color.WHITE;
         }

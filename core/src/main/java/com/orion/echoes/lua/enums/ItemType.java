@@ -13,6 +13,7 @@ public enum ItemType {
     WEAPON_PART_A,
     WEAPON_PART_B,
     WEAPON_PART_C,
+    AMMO_CELL,
     ALLOY_PLATE,
     QUANTUM_CORE,
     FIBER_MESH,

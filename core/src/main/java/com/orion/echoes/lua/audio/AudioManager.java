@@ -51,6 +51,11 @@ public class AudioManager {
     private Sound enemyHitSound;
     private Sound medkitSound;
     private Sound playerDamageSound;
+    private Sound weaponReloadStartSound;
+    private Sound weaponReloadCompleteSound;
+    private Sound storageChestOpenSound;
+    private Sound inventoryMoveSound;
+    private Sound enemyAlertSound;
 
     // =========================================================
     // VOLUME
@@ -208,6 +213,11 @@ public class AudioManager {
         enemyHitSound = loadSound(SoundPaths.ENEMY_HIT);
         medkitSound = loadSound(SoundPaths.MEDKIT_PICKUP);
         playerDamageSound = loadSound(SoundPaths.PLAYER_DAMAGE);
+        weaponReloadStartSound = loadSound(SoundPaths.WEAPON_RELOAD_START);
+        weaponReloadCompleteSound = loadSound(SoundPaths.WEAPON_RELOAD_COMPLETE);
+        storageChestOpenSound = loadSound(SoundPaths.STORAGE_CHEST_OPEN);
+        inventoryMoveSound = loadSound(SoundPaths.INVENTORY_MOVE);
+        enemyAlertSound = loadSound(SoundPaths.ENEMY_ALERT);
 
         configureMusic();
     }
@@ -561,6 +571,26 @@ public class AudioManager {
         playVaried(playerDamageSound, 0.86f, 0.94f, 1.03f);
     }
 
+    public void playWeaponReloadStart() {
+        playVaried(weaponReloadStartSound, 0.78f, 0.97f, 1.03f);
+    }
+
+    public void playWeaponReloadComplete() {
+        playVaried(weaponReloadCompleteSound, 0.82f, 0.98f, 1.04f);
+    }
+
+    public void playChestOpen() {
+        playVaried(storageChestOpenSound, 0.72f, 0.98f, 1.03f);
+    }
+
+    public void playItemMove() {
+        playVaried(inventoryMoveSound, 0.42f, 0.96f, 1.08f);
+    }
+
+    public void playEnemyAlert() {
+        playVaried(enemyAlertSound, 0.58f, 0.96f, 1.04f);
+    }
+
     public void playMarsAmbient() {
         stopAmbientMusic();
         if (!marsAmbientMusic.isPlaying()) marsAmbientMusic.play();
@@ -873,6 +903,11 @@ public class AudioManager {
         disposeSound(enemyHitSound);
         disposeSound(medkitSound);
         disposeSound(playerDamageSound);
+        disposeSound(weaponReloadStartSound);
+        disposeSound(weaponReloadCompleteSound);
+        disposeSound(storageChestOpenSound);
+        disposeSound(inventoryMoveSound);
+        disposeSound(enemyAlertSound);
     }
 
     private void disposeSound(

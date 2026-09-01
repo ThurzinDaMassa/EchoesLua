@@ -25,10 +25,11 @@ public final class InventoryOverlay {
     private static final float PANEL_W = 1088f;
     private static final float PANEL_H = 624f;
     private static final float GRID_X = 482f;
-    private static final float GRID_TOP_Y = 476f;
-    private static final float SLOT = 60f;
+    private static final float GRID_TOP_Y = 458f;
+    private static final float SLOT = 56f;
     private static final float GAP = 8f;
     private static final int COLS = 6;
+    private static final Rectangle CLOSE_BUTTON = new Rectangle(1010f, 600f, 132f, 42f);
 
     private static final ItemType[] RECIPES = {
         ItemType.ARMOR_HELMET, ItemType.ARMOR_CHEST, ItemType.ARMOR_BOOTS,
@@ -62,6 +63,11 @@ public final class InventoryOverlay {
     }
 
     public boolean isOpen() { return open; }
+    public void close() {
+        open = false;
+        wasTouched = false;
+        cancelDrag();
+    }
 
     public void update(MissionState mission) {
         if (!open) return;
@@ -69,6 +75,10 @@ public final class InventoryOverlay {
         hoveredRecipe = recipeAt(pointer.x, pointer.y);
         hoveredItem = itemAt(mission, pointer.x, pointer.y);
         boolean touched = Gdx.input.isTouched();
+        if (touched && !wasTouched && CLOSE_BUTTON.contains(pointer)) {
+            close();
+            return;
+        }
         if (touched && !wasTouched) beginPointerAction(mission);
         if (!touched && wasTouched) endPointerAction(mission);
         wasTouched = touched;
@@ -127,6 +137,8 @@ public final class InventoryOverlay {
         shapes.setColor(0.002f, 0.006f, 0.010f, 0.78f);
         shapes.rect(0f, 0f, WIDTH, HEIGHT);
         UiTheme.panel(shapes, PANEL_X, PANEL_Y, PANEL_W, PANEL_H, UiTheme.CYAN);
+        UiTheme.panel(shapes, CLOSE_BUTTON.x, CLOSE_BUTTON.y, CLOSE_BUTTON.width,
+            CLOSE_BUTTON.height, CLOSE_BUTTON.contains(pointer) ? UiTheme.GREEN : UiTheme.CYAN_SOFT);
         drawSectionPanel(126f, 78f, 306f, 498f, UiTheme.CYAN_SOFT);
         drawSectionPanel(456f, 248f, 698f, 328f, UiTheme.CYAN_SOFT);
         drawSectionPanel(456f, 78f, 698f, 150f, UiTheme.GREEN);
@@ -151,8 +163,9 @@ public final class InventoryOverlay {
         fonts.heading.draw(batch, "INVENTARIO EVA", 132f, 638f);
         fonts.micro.setColor(UiTheme.CYAN_SOFT);
         fonts.micro.draw(batch, "ORGANIZE A CARGA, EQUIPE MODULOS E FABRIQUE NOVOS ITENS", 132f, 606f);
-        fonts.micro.setColor(UiTheme.MUTED);
-        fonts.micro.draw(batch, "I  FECHAR", 1040f, 624f, 104f, Align.right, false);
+        fonts.micro.setColor(CLOSE_BUTTON.contains(pointer) ? UiTheme.GREEN : UiTheme.TEXT);
+        fonts.micro.draw(batch, "FECHAR", CLOSE_BUTTON.x, 626f,
+            CLOSE_BUTTON.width, Align.center, false);
     }
 
     private void drawSectionPanel(float x, float y, float width, float height, Color accent) {
@@ -240,10 +253,10 @@ public final class InventoryOverlay {
             ItemType type = mission.getInventorySlot(i);
             if (type == null || mission.getCount(type) <= 0 || mission.isEquipped(type)) continue;
             Rectangle rect = gridRect(i);
-            batch.draw(icon(type), rect.x + 8f, rect.y + 9f, 44f, 44f);
+            batch.draw(icon(type), rect.x + 7f, rect.y + 7f, 42f, 42f);
             fonts.micro.setColor(UiTheme.TEXT);
-            fonts.micro.draw(batch, String.valueOf(mission.getCount(type)), rect.x + 38f,
-                rect.y + 18f, 18f, Align.center, false);
+            fonts.micro.draw(batch, String.valueOf(mission.getCount(type)), rect.x + 34f,
+                rect.y + 16f, 18f, Align.center, false);
         }
         drawInspector(batch, mission);
     }
@@ -376,6 +389,7 @@ public final class InventoryOverlay {
             case WEAPON_PART_A -> assets.getWeaponPartA();
             case WEAPON_PART_B -> assets.getWeaponPartB();
             case WEAPON_PART_C -> assets.getWeaponPartC();
+            case AMMO_CELL -> assets.getEnergyProjectile();
             case ALLOY_PLATE -> assets.getAlloyPlate();
             case QUANTUM_CORE -> assets.getQuantumCore();
             case FIBER_MESH -> assets.getFiberMesh();

@@ -128,6 +128,8 @@ public class CollectibleItem {
                 return assets.getWeaponPartB();
             case WEAPON_PART_C:
                 return assets.getWeaponPartC();
+            case AMMO_CELL:
+                return assets.getEnergyProjectile();
             case ALLOY_PLATE:
                 return assets.getAlloyPlate();
             case QUANTUM_CORE:
@@ -169,6 +171,8 @@ public class CollectibleItem {
                 return 62f;
             case MEDKIT:
                 return 58f;
+            case AMMO_CELL:
+                return 50f;
             case ALLOY_PLATE, QUANTUM_CORE, FIBER_MESH:
                 return 56f;
             case MINING_TOOL, REPAIR_TOOL:
@@ -262,6 +266,7 @@ public class CollectibleItem {
             case FOOD -> new Color(1f, 0.78f, 0.22f, 1f);
             case ICE_ROCK -> new Color(0.54f, 0.88f, 1f, 1f);
             case MEDKIT -> new Color(0.30f, 1f, 0.54f, 1f);
+            case AMMO_CELL -> new Color(1f, 0.45f, 0.16f, 1f);
             case ALLOY_PLATE -> new Color(0.66f, 0.88f, 1f, 1f);
             case QUANTUM_CORE -> new Color(0.30f, 1f, 0.92f, 1f);
             case FIBER_MESH -> new Color(1f, 0.64f, 0.22f, 1f);

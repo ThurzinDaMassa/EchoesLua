@@ -27,6 +27,7 @@ import com.orion.echoes.lua.entities.LootChest;
 import com.orion.echoes.lua.entities.Portal;
 import com.orion.echoes.lua.enums.ItemType;
 import com.orion.echoes.lua.effects.ParticleManager;
+import com.orion.echoes.lua.effects.EnemyDeathAnimation;
 import com.orion.echoes.lua.progress.MissionState;
 import com.orion.echoes.lua.progress.MissionScore;
 import com.orion.echoes.lua.systems.PlayerStatus;
@@ -58,6 +59,7 @@ public class MarsScreen extends ScreenAdapter {
     private UiFonts fonts;
     private Texture surfaceTexture;
     private Texture marsBaseTexture;
+    private Texture coreReactorTexture;
     private float time;
     private boolean changingScreen;
     private float autosaveTimer;
@@ -67,13 +69,14 @@ public class MarsScreen extends ScreenAdapter {
     private Rectangle marsBaseBounds;
     private Rectangle marsBaseEntrance;
     private Portal returnPortal;
-    private float completionTimer = -1f;
+    private Portal titanPortal;
     private Array<Obstacle> obstacles;
     private Array<Enemy> enemies;
     private Array<CollectibleItem> items;
     private Array<LootChest> lootChests;
     private LootChest nearbyChest;
     private ParticleManager particles;
+    private EnemyDeathAnimation deathAnimations;
     private CombatSystem combat;
     private CollectionSystem collection;
     private ObstacleSystem obstacleSystem;
@@ -90,6 +93,11 @@ public class MarsScreen extends ScreenAdapter {
     private boolean missionFailed;
     private boolean paused;
     private boolean defeatSoundPlayed;
+    private final Rectangle coreReactorBounds = new Rectangle(1740f, 820f, 190f, 150f);
+    private boolean nearCoreReactor;
+    private boolean installingCore;
+    private float coreInstallTimer;
+    private float coreSparkTimer;
     private final Rectangle retryButton = new Rectangle(382f, 264f, 244f, 58f);
     private final Rectangle menuButton = new Rectangle(654f, 264f, 244f, 58f);
     private final Vector2 hudPointer = new Vector2();
@@ -127,6 +135,7 @@ public class MarsScreen extends ScreenAdapter {
         player = new Player(startX, startY, game.getAssets(), game.getSettings().getAstronautType());
         surfaceTexture = game.getAssets().getMarsSurface();
         marsBaseTexture = game.getAssets().getMarsBase();
+        coreReactorTexture = game.getAssets().getMarsCoreReactor();
         satellites = new Array<>();
         // Quatro vertices regulares ao redor da base: leitura imediata e rota equilibrada.
         satellites.add(new MarsSatellite(0, 560f, 980f, game.getAssets()));
@@ -138,11 +147,11 @@ public class MarsScreen extends ScreenAdapter {
         // Plataforma de transferencia fora da geometria da base: nao cobre o jogador nem o HUD.
         returnPortal = new Portal(1500f, 520f, 190f, 238f, game.getAssets());
         returnPortal.activate();
+        titanPortal = new Portal(1970f, 470f, 220f, 272f,
+            game.getAssets().getTitanPortal());
+        if (mission.isTitanPortalUnlocked()) titanPortal.activate();
         createMarsGameplay();
         game.getProgress().restoreWorld("MARTE", items, enemies);
-        if (mission.getMarsSatellitesRepaired() == MissionState.MARS_SATELLITE_TARGET) {
-            completionTimer = 1.25f;
-        }
         positionCamera();
         game.getAudio().playMarsAmbient();
     }
@@ -173,6 +182,8 @@ public class MarsScreen extends ScreenAdapter {
         if (!inventoryOpen) {
         player.update(safeDelta, status);
         returnPortal.update(safeDelta);
+        if (mission.isTitanPortalUnlocked()) titanPortal.activate();
+        titanPortal.update(safeDelta);
         aimWorld.set(Gdx.input.getX(), Gdx.input.getY());
         viewport.unproject(aimWorld);
         boolean firing = Gdx.input.isButtonPressed(Input.Buttons.LEFT)
@@ -183,9 +194,19 @@ public class MarsScreen extends ScreenAdapter {
         obstacleSystem.handleCollisions(player, obstacles, game.getAudio());
         for (CollectibleItem item : items) item.update(safeDelta);
         collection.update(player, status, items, particles, game.getAudio(), mission);
+        int killsBefore = mission.getEnemiesDefeated();
         boolean playerDamaged = combat.update(safeDelta, player, status, mission, enemies, items, particles,
             game.getAudio(), aimWorld.x, aimWorld.y,
             firing);
+        for (Enemy enemy : enemies) {
+            if (enemy.consumeDeathAnimation()) deathAnimations.emit(enemy);
+        }
+        deathAnimations.update(safeDelta);
+        if (mission.getEnemiesDefeated() > killsBefore && mission.isTitanDialogueComplete()) {
+            mission.registerTitanCombatProof();
+            titanPortal.activate();
+            game.getAudio().playPortalActivation();
+        }
         if (playerDamaged) {
             damageFlashTimer = 0.46f;
             player.triggerDamageFlash();
@@ -194,6 +215,7 @@ public class MarsScreen extends ScreenAdapter {
         }
         damageFlashTimer = Math.max(0f, damageFlashTimer - safeDelta);
         updateSatellites(safeDelta);
+        updateCoreReactor(safeDelta);
         boolean insideBase = marsBaseBounds.overlaps(player.getBounds());
         if (insideBase) {
             status.addOxygen(14f * safeDelta);
@@ -212,13 +234,6 @@ public class MarsScreen extends ScreenAdapter {
         game.getAudio().update(safeDelta, player.isMoving(), insideBase,
             status.getOxygen() < 25f, false, 0f, 0f);
         time += safeDelta;
-        if (completionTimer >= 0f) {
-            completionTimer -= safeDelta;
-            if (completionTimer <= 0f) {
-                finishMission();
-                return;
-            }
-        }
         autosaveTimer += safeDelta;
         if (autosaveTimer >= 1f) {
             autosaveTimer = 0f;
@@ -263,6 +278,11 @@ public class MarsScreen extends ScreenAdapter {
         enemies.add(new Enemy(2820f, 1010f, game.getAssets().getEnemyMarsSkimmer(), Enemy.Behavior.HUNTER));
         enemies.add(new Enemy(3380f, 760f, game.getAssets().getEnemyMarsSkimmer(), Enemy.Behavior.HUNTER));
         enemies.add(new Enemy(2600f, 1840f, game.getAssets().getEnemyMarsSkimmer(), Enemy.Behavior.PATROL));
+        // Reforcos persistentes garantem atividade hostil mesmo em saves que ja eliminaram a patrulha original.
+        enemies.add(new Enemy(1880f, 1080f, game.getAssets().getEnemyMarsSkimmer(), Enemy.Behavior.HUNTER));
+        enemies.add(new Enemy(2210f, 1360f, game.getAssets().getEnemyMarsSkimmer(), Enemy.Behavior.PATROL));
+        enemies.add(new Enemy(3050f, 1880f, game.getAssets().getEnemyMarsSkimmer(), Enemy.Behavior.HUNTER));
+        enemies.add(new Enemy(3620f, 1180f, game.getAssets().getEnemyMarsSkimmer(), Enemy.Behavior.PATROL));
 
         items = new Array<>();
         RandomXS128 random = new RandomXS128(mission.getWorldSeed() ^ 0x4D415253L);
@@ -271,7 +291,7 @@ public class MarsScreen extends ScreenAdapter {
             ItemType.MEDKIT, ItemType.ICE_ROCK,
             ItemType.AMMO_CELL, ItemType.AMMO_CELL, ItemType.AMMO_CELL,
             ItemType.FOOD, ItemType.OXYGEN, ItemType.MEDKIT,
-            ItemType.ALLOY_PLATE, ItemType.FIBER_MESH
+            ItemType.ALLOY_PLATE, ItemType.FIBER_MESH, ItemType.METHANE_SAMPLE
         };
         for (int i = 0; i < marsItems.length; i++) {
             Vector2 spawn = findSafeMarsSpawn(random, i);
@@ -290,6 +310,7 @@ public class MarsScreen extends ScreenAdapter {
         }
 
         particles = new ParticleManager();
+        deathAnimations = new EnemyDeathAnimation();
         combat = new CombatSystem(game.getAssets(), game.getSettings().getDifficulty());
         collection = new CollectionSystem();
         obstacleSystem = new ObstacleSystem();
@@ -312,11 +333,26 @@ public class MarsScreen extends ScreenAdapter {
             inventoryOpen = inventoryOverlay.isOpen();
             return;
         }
+        if (inventoryKey && nearCoreReactor && !installingCore && mission.isTitanEnemyDefeated()
+            && !mission.isTitanCoreInstalled()) {
+            if (mission.getCount(ItemType.TITAN_CORE) > 0) {
+                installingCore = true;
+                coreInstallTimer = 3f;
+                coreSparkTimer = 0f;
+                player.triggerCraftAnimation();
+                mission.notifyAction("INTEGRANDO NUCLEO DE TITA // mantenha-se junto ao reator");
+            } else {
+                mission.notifyAction("REATOR AGUARDANDO // recupere o Nucleo de Tita");
+            }
+            return;
+        }
         if (inventoryKey && marsBaseEntrance.overlaps(player.getBounds())) {
             goToMarsBase();
             return;
         }
         if (inventoryKey && !returnPortal.isPlayerNear(player)
+            && !titanPortal.isPlayerNear(player)
+            && !nearCoreReactor
             && nearbySatellite == null) {
             inventoryOverlay.toggle();
             inventoryOpen = inventoryOverlay.isOpen();
@@ -334,6 +370,12 @@ public class MarsScreen extends ScreenAdapter {
         }
         if (Gdx.input.isKeyJustPressed(Input.Keys.E) && returnPortal.isPlayerNear(player)) {
             returnToMoon();
+        } else if (Gdx.input.isKeyJustPressed(Input.Keys.E) && titanPortal.isPlayerNear(player)) {
+            if (!mission.isTitanPortalUnlocked()) {
+                mission.notifyAction(mission.getTitanPortalStatus());
+            } else {
+                travelToTitan();
+            }
         }
     }
 
@@ -413,6 +455,8 @@ public class MarsScreen extends ScreenAdapter {
         expanded.height += 108f;
         if (expanded.overlaps(expanded(marsBaseBounds, 90f))) return false;
         if (expanded.overlaps(expanded(returnPortal.getBounds(), 80f))) return false;
+        if (expanded.overlaps(expanded(titanPortal.getBounds(), 80f))) return false;
+        if (expanded.overlaps(expanded(coreReactorBounds, 70f))) return false;
         for (MarsSatellite satellite : satellites) {
             if (expanded.overlaps(expanded(satellite.getBounds(), 80f))) return false;
         }
@@ -477,7 +521,7 @@ public class MarsScreen extends ScreenAdapter {
                 particles.emitProcessingBurst(completed.getCenterX(), completed.getCenterY());
                 game.getAudio().playRepair();
                 if (mission.getMarsSatellitesRepaired() == MissionState.MARS_SATELLITE_TARGET) {
-                    completionTimer = 1.25f;
+                    mission.notifyAction("REDE ARES ONLINE // entre na base e fale com a Oficial Vega");
                 }
             }
             return;
@@ -497,6 +541,32 @@ public class MarsScreen extends ScreenAdapter {
         }
     }
 
+    private void updateCoreReactor(float delta) {
+        nearCoreReactor = expanded(coreReactorBounds, 70f).overlaps(player.getBounds());
+        if (!installingCore) return;
+        if (!nearCoreReactor) {
+            installingCore = false;
+            mission.notifyAction("INTEGRACAO INTERROMPIDA // aproxime-se do reator");
+            return;
+        }
+        player.triggerCraftAnimation();
+        coreInstallTimer -= delta;
+        coreSparkTimer -= delta;
+        if (coreSparkTimer <= 0f) {
+            particles.emitRepairSparks(coreReactorBounds.x + coreReactorBounds.width * 0.5f,
+                coreReactorBounds.y + coreReactorBounds.height * 0.62f, true);
+            coreSparkTimer = 0.10f;
+        }
+        if (coreInstallTimer <= 0f && mission.installTitanCore()) {
+            installingCore = false;
+            particles.emitProcessingBurst(coreReactorBounds.x + coreReactorBounds.width * 0.5f,
+                coreReactorBounds.y + coreReactorBounds.height * 0.60f);
+            game.getAudio().playPortalActivation();
+            mission.notifyAction("ENERGIA RESTAURADA // PROTOCOLO TRINDADE CONCLUIDO");
+            finishMission();
+        }
+    }
+
     private void finishMission() {
         if (changingScreen) return;
         changingScreen = true;
@@ -506,12 +576,25 @@ public class MarsScreen extends ScreenAdapter {
             + mission.getRepairCount() * 350
             + mission.getEnemiesDefeated() * 250
             + mission.getMarsSitesScanned() * 500;
+        score += mission.isTitanCoreInstalled() ? 5000 : 0;
         boolean newRecord = game.getProgress().recordVictory(score, totalTime);
         int bestScore = game.getProgress().getBestScore();
         game.getProgress().clearSavedMission();
         game.getAudio().stopGameplayAudio();
         game.changeScreen(new VictoryScreen(game, totalTime, status.getWater(),
             status.getFuel(), collectedItems, status.getOxygen(), score, bestScore, newRecord));
+    }
+
+    private void travelToTitan() {
+        if (changingScreen) return;
+        changingScreen = true;
+        float totalTime = lunarMissionTime + time;
+        mission.markEnteredTitan();
+        game.getProgress().saveMission(mission, status, "MARTE", totalTime,
+            collectedItems, player, items, enemies);
+        game.getAudio().stopGameplayAudio();
+        game.getAudio().playPortalActivation();
+        game.changeScreen(new TitanScreen(game, mission, status, totalTime, collectedItems));
     }
 
     private void renderMarsWorld() {
@@ -554,12 +637,26 @@ public class MarsScreen extends ScreenAdapter {
         batch.begin();
         batch.setColor(Color.WHITE);
         batch.draw(marsBaseTexture, 790f, 395f, 680f, 454f);
+        float reactorPulse = mission.isTitanCoreInstalled()
+            ? 1.02f + MathUtils.sin(time * 4f) * 0.02f : 1f;
+        float reactorWidth = 250f * reactorPulse;
+        float reactorHeight = 210f * reactorPulse;
+        batch.draw(coreReactorTexture,
+            coreReactorBounds.x + coreReactorBounds.width * 0.5f - reactorWidth * 0.5f,
+            coreReactorBounds.y + coreReactorBounds.height * 0.5f - reactorHeight * 0.5f,
+            reactorWidth, reactorHeight);
+        if (mission.isTitanCoreInstalled()) {
+            batch.draw(game.getAssets().getTitanPowerCore(), coreReactorBounds.x + 65f,
+                coreReactorBounds.y + 67f, 60f, 60f);
+        }
         returnPortal.render(batch);
+        titanPortal.render(batch);
         for (Obstacle obstacle : obstacles) obstacle.render(batch);
         for (LootChest chest : lootChests) chest.render(batch);
         for (CollectibleItem item : items) item.render(batch);
         for (Enemy enemy : enemies) enemy.render(batch);
         combat.render(batch);
+        deathAnimations.render(batch);
         for (MarsSatellite satellite : satellites) {
             satellite.render(batch, mission.isMarsSiteScanned(satellite.getIndex()));
         }
@@ -612,9 +709,12 @@ public class MarsScreen extends ScreenAdapter {
         UiTheme.bar(shapes, 1032f, 633f, 142f, 5f,
             shownEnergy / GameConstants.MAX_ENERGY, UiTheme.GREEN);
         UiTheme.panel(shapes, 24f, 22f, 520f, 52f, UiTheme.GREEN);
-        if (marsBaseEntrance.overlaps(player.getBounds())) {
+        if (nearCoreReactor && mission.isTitanEnemyDefeated()) {
+            UiTheme.panel(shapes, 562f, 22f, 388f, 52f,
+                mission.isTitanCoreInstalled() ? UiTheme.GREEN : UiTheme.WARNING);
+        } else if (marsBaseEntrance.overlaps(player.getBounds())) {
             UiTheme.panel(shapes, 562f, 22f, 388f, 52f, UiTheme.GREEN);
-        } else if (returnPortal.isPlayerNear(player)) {
+        } else if (returnPortal.isPlayerNear(player) || titanPortal.isPlayerNear(player)) {
             UiTheme.panel(shapes, 562f, 22f, 388f, 52f, UiTheme.CYAN_SOFT);
         } else if (nearbyChest != null && !nearbyChest.isOpened()) {
             UiTheme.panel(shapes, 562f, 22f, 388f, 52f, UiTheme.WARNING);
@@ -634,11 +734,11 @@ public class MarsScreen extends ScreenAdapter {
         fonts.micro.draw(batch, "SUPERFICIE // SOL " + formatTime(time), 44f, 657f);
         fonts.label.setColor(UiTheme.TEXT);
         fonts.label.draw(batch, mission.getMarsSatellitesRepaired() == MissionState.MARS_SATELLITE_TARGET
-            ? "PROTOCOLO ARES CONCLUIDO" : "REPARE OS SATELITES  "
+            ? "ETAPA TITA // NOVO PROTOCOLO" : "REPARE OS SATELITES  "
                 + mission.getMarsSatellitesRepaired() + "/" + MissionState.MARS_SATELLITE_TARGET, 336f, 678f);
         fonts.micro.setColor(UiTheme.MUTED);
         fonts.micro.draw(batch, mission.getMarsSatellitesRepaired() == MissionState.MARS_SATELLITE_TARGET
-            ? "Transmitindo relatorio final..." : "Repare os quatro satelites marcados no mapa.",
+            ? mission.getTitanObjective() : "Repare os quatro satelites marcados no mapa.",
             336f, 657f);
         fonts.label.setColor(UiTheme.CYAN_SOFT);
         fonts.label.draw(batch, "O2", 976f, 674f);
@@ -666,7 +766,7 @@ public class MarsScreen extends ScreenAdapter {
 
         fonts.label.setColor(UiTheme.GREEN);
         fonts.label.draw(batch, mission.getMarsSatellitesRepaired() == MissionState.MARS_SATELLITE_TARGET
-            ? "BASE ARES // TODOS OS SISTEMAS ONLINE"
+            ? mission.getTitanPortalStatus()
             : "RESTAURE OS SATELITES MARCIANOS " + mission.getMarsSatellitesRepaired()
                 + "/" + MissionState.MARS_SATELLITE_TARGET,
             44f, 57f);
@@ -675,7 +775,16 @@ public class MarsScreen extends ScreenAdapter {
             mission.getRepairCount() + " reparos lunares  //  MUN "
                 + mission.getCount(ItemType.AMMO_CELL) + "  //  autosave ativo",
             44f, 37f);
-        if (marsBaseEntrance.overlaps(player.getBounds())) {
+        if (nearCoreReactor && mission.isTitanEnemyDefeated()) {
+            fonts.label.setColor(mission.isTitanCoreInstalled() ? UiTheme.GREEN : UiTheme.WARNING);
+            fonts.label.draw(batch, installingCore
+                ? "INTEGRANDO NUCLEO // " + Math.round((1f - coreInstallTimer / 3f) * 100f) + "%"
+                : mission.isTitanCoreInstalled() ? "REATOR TRINDADE // ONLINE"
+                : mission.getCount(ItemType.TITAN_CORE) > 0 ? "[ E ] INSTALAR NUCLEO DE TITA"
+                : "REATOR AGUARDANDO NUCLEO", 582f, 54f);
+            fonts.micro.setColor(UiTheme.MUTED);
+            fonts.micro.draw(batch, "MATRIZ ENERGETICA DA BASE ARES", 582f, 35f);
+        } else if (marsBaseEntrance.overlaps(player.getBounds())) {
             fonts.label.setColor(UiTheme.GREEN);
             fonts.label.draw(batch, "[ E ] ENTRAR NA BASE ARES", 582f, 54f);
             fonts.micro.setColor(UiTheme.MUTED);
@@ -685,6 +794,12 @@ public class MarsScreen extends ScreenAdapter {
             fonts.label.draw(batch, "[ E ] PORTAL DE RETORNO // LUA", 582f, 54f);
             fonts.micro.setColor(UiTheme.MUTED);
             fonts.micro.draw(batch, "CHECKPOINT PRESERVADO", 582f, 35f);
+        } else if (titanPortal.isPlayerNear(player)) {
+            fonts.label.setColor(mission.isTitanPortalUnlocked() ? UiTheme.GREEN : UiTheme.WARNING);
+            fonts.label.draw(batch, mission.isTitanPortalUnlocked()
+                ? "[ E ] VIAJAR PARA TITA" : "PORTAL TITA BLOQUEADO", 582f, 54f);
+            fonts.micro.setColor(UiTheme.MUTED);
+            fonts.micro.draw(batch, mission.getTitanPortalStatus(), 582f, 35f);
         } else if (nearbyChest != null && !nearbyChest.isOpened()) {
             fonts.label.setColor(UiTheme.WARNING);
             fonts.label.draw(batch, "[ F ] INSPECIONAR BAU", 582f, 54f);

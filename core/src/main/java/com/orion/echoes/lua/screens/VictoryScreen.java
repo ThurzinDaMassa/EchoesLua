@@ -43,7 +43,8 @@ public class VictoryScreen extends ScreenAdapter {
     private Viewport viewport;
     private ShapeRenderer shapes;
     private UiFonts fonts;
-    private Texture portalTexture;
+    private Texture reactorTexture;
+    private Texture coreTexture;
     private float animationTime;
     private float resultReveal;
     private int displayedScore;
@@ -82,7 +83,8 @@ public class VictoryScreen extends ScreenAdapter {
         camera.update();
         shapes = new ShapeRenderer();
         fonts = new UiFonts();
-        portalTexture = game.getAssets().getPortal();
+        reactorTexture = game.getAssets().getMarsCoreReactor();
+        coreTexture = game.getAssets().getTitanPowerCore();
         game.getAudio().playVictory();
     }
 
@@ -91,8 +93,10 @@ public class VictoryScreen extends ScreenAdapter {
         if (changingScreen) return;
         animationTime += delta;
         float safeDelta = Math.min(delta, 1f / 20f);
-        resultReveal = MathUtils.lerp(resultReveal, 1f,
-            1f - (float) Math.pow(0.00008f, safeDelta));
+        if (animationTime > 1.15f) {
+            resultReveal = MathUtils.lerp(resultReveal, 1f,
+                1f - (float) Math.pow(0.00008f, safeDelta));
+        }
         displayedScore = Math.round(score * resultReveal);
         updatePointer();
         updateButtonPositions();
@@ -100,12 +104,13 @@ public class VictoryScreen extends ScreenAdapter {
         if (changingScreen) return;
         clear();
         drawBackground();
-        drawPortal();
+        drawReactorFinale();
         drawResultsPanel();
         drawResultsText();
     }
 
     private void handleInput() {
+        if (resultReveal < 0.82f) return;
         boolean clicked = Gdx.input.justTouched();
         if (clicked && restartButton.contains(pointer)) {
             changingScreen = true;
@@ -148,12 +153,31 @@ public class VictoryScreen extends ScreenAdapter {
         disableBlend();
     }
 
-    private void drawPortal() {
-        float pulse = 0.94f + MathUtils.sin(animationTime * 2.4f) * 0.04f;
+    private void drawReactorFinale() {
+        float reveal = MathUtils.clamp(animationTime / 1.15f, 0f, 1f);
+        float pulse = 0.98f + MathUtils.sin(animationTime * 4.2f) * 0.025f;
+        enableBlend();
+        shapes.setProjectionMatrix(camera.combined);
+        shapes.begin(ShapeRenderer.ShapeType.Filled);
+        for (int i = 0; i < 5; i++) {
+            float radius = 78f + ((animationTime * 95f + i * 58f) % 290f);
+            float alpha = (1f - (radius - 78f) / 290f) * 0.18f * reveal;
+            shapes.setColor(0.10f, 0.88f, 1f, alpha);
+            shapes.circle(1012f, 338f, radius, 64);
+        }
+        shapes.setColor(0.10f, 0.88f, 1f, 0.20f * reveal);
+        shapes.rect(748f, 335f, 525f, 5f);
+        shapes.rect(1009f, 88f, 6f, 500f);
+        shapes.end();
+        disableBlend();
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
-        batch.setColor(1f, 1f, 1f, pulse);
-        batch.draw(portalTexture, 808f, 75f, 382f, 520f);
+        batch.setColor(1f, 1f, 1f, reveal);
+        batch.draw(reactorTexture, 774f, 98f, 476f, 476f);
+        float coreSize = (94f + MathUtils.sin(animationTime * 5f) * 7f) * pulse;
+        batch.draw(coreTexture, 1012f - coreSize * 0.5f, 338f - coreSize * 0.5f,
+            coreSize * 0.5f, coreSize * 0.5f, coreSize, coreSize, 1f, 1f,
+            animationTime * 18f, 0, 0, coreTexture.getWidth(), coreTexture.getHeight(), false, false);
         batch.setColor(Color.WHITE);
         batch.end();
     }
@@ -190,12 +214,12 @@ public class VictoryScreen extends ScreenAdapter {
 
         set(fonts.micro, newRecord ? UiTheme.GREEN : UiTheme.CYAN);
         fonts.micro.draw(batch,
-            newRecord ? "NOVO RECORDE // INTEGRACAO CONFIRMADA" : "INTEGRACAO CONFIRMADA // SINAL ESTAVEL",
+            newRecord ? "NOVO RECORDE // NUCLEO SINCRONIZADO" : "NUCLEO SINCRONIZADO // REDE ESTAVEL",
             86f, 628f + yOff);
         set(fonts.heading, UiTheme.TEXT);
         fonts.heading.draw(batch, "MISSAO CONCLUIDA", 86f, 583f + yOff);
         set(fonts.body, UiTheme.MUTED);
-        fonts.body.draw(batch, "Lua restaurada. Base Ares sincronizada. Rota interplanetaria estavel.",
+        fonts.body.draw(batch, "O Predador de Metano foi neutralizado. O Nucleo de Tita restaurou a energia da Base Ares.",
             86f, 546f + yOff, 570f, Align.left, true);
 
         set(fonts.micro, UiTheme.CYAN_SOFT);
@@ -223,7 +247,7 @@ public class VictoryScreen extends ScreenAdapter {
             menuButton.y + 37f, menuButton.width, Align.center, false);
 
         set(fonts.micro, UiTheme.CYAN_SOFT);
-        fonts.micro.draw(batch, "ROTA LUA > MARTE // ESTAVEL", 850f, 640f);
+        fonts.micro.draw(batch, "TITA > MARTE // PROTOCOLO TRINDADE", 822f, 640f);
         set(fonts.micro, UiTheme.MUTED);
         fonts.micro.draw(batch, "ORION DEEP SPACE PROGRAM", 878f, 46f);
         batch.end();

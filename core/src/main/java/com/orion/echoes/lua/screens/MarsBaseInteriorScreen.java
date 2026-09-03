@@ -21,6 +21,7 @@ import com.orion.echoes.lua.entities.Player;
 import com.orion.echoes.lua.enums.ItemType;
 import com.orion.echoes.lua.progress.MissionState;
 import com.orion.echoes.lua.systems.PlayerStatus;
+import com.orion.echoes.lua.systems.DialogSystem;
 import com.orion.echoes.lua.ui.InventoryOverlay;
 import com.orion.echoes.lua.ui.StorageOverlay;
 import com.orion.echoes.lua.ui.UiFonts;
@@ -32,6 +33,8 @@ public final class MarsBaseInteriorScreen extends ScreenAdapter {
     private static final Rectangle WALKABLE = new Rectangle(126f, 96f, 1028f, 478f);
     private static final Rectangle AIRLOCK = new Rectangle(520f, 70f, 240f, 138f);
     private static final Rectangle STORAGE_CHEST = new Rectangle(218f, 286f, 210f, 140f);
+    private static final Rectangle OFFICER = new Rectangle(574f, 300f, 126f, 178f);
+    private static final Rectangle DIALOG_NEXT = new Rectangle(936f, 98f, 254f, 52f);
     private static final Rectangle PAUSE_RESUME = new Rectangle(382f, 264f, 244f, 58f);
     private static final Rectangle PAUSE_MENU = new Rectangle(654f, 264f, 244f, 58f);
 
@@ -47,6 +50,7 @@ public final class MarsBaseInteriorScreen extends ScreenAdapter {
     private Viewport viewport;
     private Texture interior;
     private Texture storageChestTexture;
+    private Texture officerTexture;
     private Player player;
     private CraftingWorkbench workbench;
     private InventoryOverlay inventory;
@@ -55,10 +59,13 @@ public final class MarsBaseInteriorScreen extends ScreenAdapter {
     private boolean nearWorkbench;
     private boolean nearAirlock;
     private boolean nearStorageChest;
+    private boolean nearOfficer;
     private boolean storageOpen;
     private boolean changingScreen;
     private boolean paused;
     private float autosaveTimer;
+    private final DialogSystem dialog = new DialogSystem();
+    private boolean authorizationDialog;
 
     public MarsBaseInteriorScreen(LunarEchoesGame game, MissionState mission,
                                   PlayerStatus status, float missionTime,
@@ -79,6 +86,7 @@ public final class MarsBaseInteriorScreen extends ScreenAdapter {
         viewport = new FitViewport(GameConstants.VIRTUAL_WIDTH, GameConstants.VIRTUAL_HEIGHT, camera);
         interior = game.getAssets().getBaseInterior();
         storageChestTexture = game.getAssets().getMarsStorageChest();
+        officerTexture = game.getAssets().getNpcAresOfficer();
         player = new Player(598f, 154f, game.getAssets(), game.getSettings().getAstronautType());
         workbench = new CraftingWorkbench(874f, 286f, 210f, 178f, game.getAssets());
         inventory = new InventoryOverlay(game.getAssets());
@@ -100,13 +108,14 @@ public final class MarsBaseInteriorScreen extends ScreenAdapter {
         }
         if (storageOpen) storageOpen = storage.update(mission);
         inventory.update(mission);
-        if (!storageOpen && !inventory.isOpen()) {
+        if (!storageOpen && !inventory.isOpen() && !dialog.isOpen()) {
             player.update(dt, status);
             clampPlayer();
             workbench.update(dt);
             nearWorkbench = workbench.isPlayerNear(player);
             nearAirlock = AIRLOCK.overlaps(player.getBounds());
             nearStorageChest = STORAGE_CHEST.overlaps(player.getBounds());
+            nearOfficer = expanded(OFFICER, 76f).overlaps(player.getBounds());
         }
         status.addOxygen(16f * dt);
         status.addEnergy(12f * dt);
@@ -116,9 +125,22 @@ public final class MarsBaseInteriorScreen extends ScreenAdapter {
         drawHud();
         if (storageOpen) drawStorage();
         inventory.render(batch, mission);
+        if (dialog.isOpen()) drawDialog();
     }
 
     private void handleInput() {
+        if (dialog.isOpen()) {
+            if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE) || dialogButtonPressed()) {
+                dialog.next();
+                game.getAudio().playMenuClick();
+                if (dialog.consumeFinished()) {
+                    if (authorizationDialog) mission.completeTitanDialogue();
+                    authorizationDialog = false;
+                    save();
+                }
+            }
+            return;
+        }
         if (paused) {
             if (Gdx.input.justTouched()) {
                 updatePointer();
@@ -149,6 +171,10 @@ public final class MarsBaseInteriorScreen extends ScreenAdapter {
             return;
         }
         if (e && nearAirlock) { returnToMars(); return; }
+        if (e && nearOfficer) {
+            talkToOfficer();
+            return;
+        }
         if (e) inventory.toggle();
         else if (esc) paused = true;
     }
@@ -166,6 +192,8 @@ public final class MarsBaseInteriorScreen extends ScreenAdapter {
         batch.draw(storageChestTexture, STORAGE_CHEST.x, STORAGE_CHEST.y,
             STORAGE_CHEST.width, STORAGE_CHEST.height);
         batch.setColor(Color.WHITE);
+        batch.draw(officerTexture, OFFICER.x, OFFICER.y, OFFICER.width, OFFICER.height);
+        batch.setColor(Color.WHITE);
         player.render(batch);
         batch.end();
     }
@@ -182,15 +210,75 @@ public final class MarsBaseInteriorScreen extends ScreenAdapter {
         fonts.label.draw(batch, "BASE ARES // MODULO DE LOGISTICA", 48f, 675f);
         fonts.micro.setColor(UiTheme.MUTED);
         fonts.micro.draw(batch, "AMBIENTE PRESSURIZADO  //  AUTOSAVE ATIVO", 48f, 652f);
-        fonts.label.setColor(nearWorkbench || nearStorageChest || nearAirlock
+        fonts.label.setColor(nearWorkbench || nearStorageChest || nearAirlock || nearOfficer
             ? UiTheme.WARNING : UiTheme.CYAN_SOFT);
-        String action = nearStorageChest && mission.hasMarsStorage()
+        String action = nearOfficer ? "[ E ] FALAR COM OFICIAL VEGA"
+            : nearStorageChest && mission.hasMarsStorage()
             ? "[ E ] ABRIR BAU DE CARGA"
             : nearWorkbench && !mission.hasMarsStorage() ? "[ E ] FABRICAR BAU DE CARGA"
             : nearAirlock ? "[ E ] SAIR PARA A SUPERFICIE DE MARTE"
             : "[ E ] ABRIR INVENTARIO";
         fonts.label.draw(batch, action, 48f, 55f);
         batch.end();
+    }
+
+    private void talkToOfficer() {
+        if (mission.getMarsSatellitesRepaired() < MissionState.MARS_SATELLITE_TARGET) {
+            dialog.start("OFICIAL VEGA",
+                "Os quatro satelites ainda estao fora da rede. Restaure-os antes da expedicao.",
+                "Volte quando o quadrante Ares estiver completamente online.");
+        } else if (!mission.isTitanDialogueComplete()) {
+            authorizationDialog = true;
+            dialog.start("OFICIAL VEGA",
+                "Recebemos um pulso sob a atmosfera de Tita. Nao e um eco natural.",
+                "O portal exige sua autorizacao e uma prova: combate em Marte ou amostra de metano.",
+                "Valide uma das provas, atravesse o portal e neutralize a ameaca em Tita.");
+        } else if (!mission.isTitanPortalUnlocked()
+            && mission.getCount(ItemType.METHANE_SAMPLE) > 0) {
+            mission.deliverMethaneSample();
+            game.getAudio().playPortalActivation();
+            dialog.start("OFICIAL VEGA",
+                "Amostra confirmada. Assinatura criogenica valida.",
+                "Portal de Tita liberado. Boa sorte, astronauta.");
+        } else {
+            dialog.start("OFICIAL VEGA", mission.getTitanObjective(), mission.getTitanPortalStatus());
+        }
+    }
+
+    private void drawDialog() {
+        Gdx.gl.glEnable(GL20.GL_BLEND);
+        shapes.setProjectionMatrix(camera.combined);
+        shapes.begin(ShapeRenderer.ShapeType.Filled);
+        shapes.setColor(0.002f, 0.006f, 0.010f, 0.62f);
+        shapes.rect(0f, 0f, GameConstants.VIRTUAL_WIDTH, GameConstants.VIRTUAL_HEIGHT);
+        UiTheme.panel(shapes, 74f, 82f, 1132f, 206f, new Color(0.94f, 0.30f, 0.13f, 1f));
+        UiTheme.panel(shapes, DIALOG_NEXT.x, DIALOG_NEXT.y, DIALOG_NEXT.width,
+            DIALOG_NEXT.height, UiTheme.CYAN);
+        shapes.end();
+        batch.setProjectionMatrix(camera.combined);
+        batch.begin();
+        fonts.micro.setColor(new Color(0.94f, 0.40f, 0.20f, 1f));
+        fonts.micro.draw(batch, "TRANSMISSAO ARES // " + dialog.getSpeaker(), 104f, 250f);
+        fonts.body.setColor(UiTheme.TEXT);
+        fonts.body.draw(batch, dialog.getLine(), 104f, 210f, 780f, Align.left, true);
+        fonts.micro.setColor(UiTheme.MUTED);
+        fonts.micro.draw(batch, (dialog.getIndex() + 1) + " / " + dialog.getLineCount(), 104f, 122f);
+        fonts.label.setColor(UiTheme.TEXT);
+        fonts.label.draw(batch, "CONTINUAR", DIALOG_NEXT.x, DIALOG_NEXT.y + 34f,
+            DIALOG_NEXT.width, Align.center, false);
+        batch.end();
+        Gdx.gl.glDisable(GL20.GL_BLEND);
+    }
+
+    private boolean dialogButtonPressed() {
+        if (!Gdx.input.justTouched()) return false;
+        updatePointer();
+        return DIALOG_NEXT.contains(pointer);
+    }
+
+    private Rectangle expanded(Rectangle source, float margin) {
+        return new Rectangle(source.x - margin, source.y - margin,
+            source.width + margin * 2f, source.height + margin * 2f);
     }
 
     private void drawStorage() {

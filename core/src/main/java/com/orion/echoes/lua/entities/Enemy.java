@@ -21,6 +21,7 @@ public class Enemy {
     private float hp = 100f;
     private float time;
     private boolean pendingDrop;
+    private boolean pendingDeathAnimation;
     private float velocityX;
     private float velocityY;
     private float hitFlashTimer;
@@ -73,7 +74,10 @@ public class Enemy {
         boolean wasAlive = isAlive();
         hp = Math.max(0f, hp - amount);
         hitFlashTimer = 0.16f;
-        if (wasAlive && !isAlive()) pendingDrop = true;
+        if (wasAlive && !isAlive()) {
+            pendingDrop = true;
+            pendingDeathAnimation = true;
+        }
     }
 
     public void defeat() {
@@ -115,6 +119,17 @@ public class Enemy {
 
     public boolean isAlive() {
         return hp > 0f;
+    }
+
+    public float getHealth() { return hp; }
+    public float getMaxHealth() { return 100f; }
+    public Texture getDeathTexture() { return sprite.getTexture(); }
+    public float getDeathWidth() { return sprite.getWidth(); }
+    public float getDeathHeight() { return sprite.getHeight(); }
+    public boolean consumeDeathAnimation() {
+        if (!pendingDeathAnimation) return false;
+        pendingDeathAnimation = false;
+        return true;
     }
 
     public float getCenterX() { return position.x + SIZE / 2f; }

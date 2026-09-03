@@ -67,6 +67,13 @@ public class GameProgress {
         preferences.putBoolean("save.marsStorage", mission.hasMarsStorage());
         preferences.putInteger("save.kills", mission.getEnemiesDefeated());
         preferences.putLong("save.worldSeed", mission.getWorldSeed());
+        preferences.putBoolean("save.titan.dialogue", mission.isTitanDialogueComplete());
+        preferences.putBoolean("save.titan.combatProof", mission.hasTitanCombatProof());
+        preferences.putBoolean("save.titan.sampleDelivered", mission.isMethaneSampleDelivered());
+        preferences.putBoolean("save.titan.entered", mission.hasEnteredTitan());
+        preferences.putBoolean("save.titan.enemyDefeated", mission.isTitanEnemyDefeated());
+        preferences.putBoolean("save.titan.coreInstalled", mission.isTitanCoreInstalled());
+        preferences.putBoolean("save.lunar.iceProcessed", mission.isIceProcessed());
         for (int i = 0; i < MissionState.MARS_SATELLITE_TARGET; i++) {
             preferences.putBoolean("save.marsSite." + i, mission.isMarsSiteScanned(i));
         }
@@ -75,6 +82,9 @@ public class GameProgress {
         }
         for (int i = 0; i < MissionState.MARS_CHEST_COUNT; i++) {
             preferences.putBoolean("save.marsChest." + i, mission.isChestOpened(true, i));
+        }
+        for (int i = 0; i < MissionState.TITAN_CHEST_COUNT; i++) {
+            preferences.putBoolean("save.titanChest." + i, mission.isTitanChestOpened(i));
         }
         putItemType("save.equipped.helmet", mission.getEquippedHelmet());
         putItemType("save.equipped.chest", mission.getEquippedChest());
@@ -130,6 +140,15 @@ public class GameProgress {
         mission.restoreMarsStorage(preferences.getBoolean("save.marsStorage", false));
         mission.restoreEnemiesDefeated(preferences.getInteger("save.kills", 0));
         mission.restoreWorldSeed(preferences.getLong("save.worldSeed", mission.getWorldSeed()));
+        mission.restoreTitanProgress(
+            preferences.getBoolean("save.titan.dialogue", false),
+            preferences.getBoolean("save.titan.combatProof", false),
+            preferences.getBoolean("save.titan.sampleDelivered", false),
+            preferences.getBoolean("save.titan.entered", false),
+            preferences.getBoolean("save.titan.enemyDefeated", false));
+        mission.restoreExtendedProgress(
+            preferences.getBoolean("save.lunar.iceProcessed", false),
+            preferences.getBoolean("save.titan.coreInstalled", false));
         for (int i = 0; i < MissionState.MARS_SATELLITE_TARGET; i++) {
             mission.restoreMarsSite(i, preferences.getBoolean("save.marsSite." + i, false));
         }
@@ -138,6 +157,9 @@ public class GameProgress {
         }
         for (int i = 0; i < MissionState.MARS_CHEST_COUNT; i++) {
             mission.restoreChest(true, i, preferences.getBoolean("save.marsChest." + i, false));
+        }
+        for (int i = 0; i < MissionState.TITAN_CHEST_COUNT; i++) {
+            mission.restoreTitanChest(i, preferences.getBoolean("save.titanChest." + i, false));
         }
         mission.restoreEquipment(
             readItemType("save.equipped.helmet"), readItemType("save.equipped.chest"),

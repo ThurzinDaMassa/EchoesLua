@@ -53,6 +53,18 @@ public final class AssetPaths {
 
     public static final String MARS_SURFACE =
         "textures/mars_surface.png";
+    public static final String TITAN_SURFACE = "textures/titan_surface.png";
+    public static final String ENEMY_TITAN_STALKER = "textures/enemy_titan_stalker.png";
+    public static final String ENEMY_TITAN_MINION = "textures/enemy_titan_minion.png";
+    public static final String TITAN_OXYGEN_BASE = "textures/titan_oxygen_base.png";
+    public static final String BOSS_METHANE_ORB = "textures/boss_methane_orb.png";
+    public static final String BOSS_ICE_SHARD = "textures/boss_ice_shard.png";
+    public static final String BOSS_SHOCKWAVE = "textures/boss_shockwave.png";
+    public static final String TITAN_POWER_CORE = "textures/titan_power_core.png";
+    public static final String MARS_CORE_REACTOR = "textures/mars_core_reactor.png";
+    public static final String NPC_ARES_OFFICER = "textures/npc_ares_officer.png";
+    public static final String PORTAL_TITAN = "textures/portal_titan.png";
+    public static final String METHANE_SAMPLE = "textures/methane_sample.png";
 
     public static final String MARS_ROCK_SEDIMENTARY =
         "textures/mars_rock_sedimentary.png";

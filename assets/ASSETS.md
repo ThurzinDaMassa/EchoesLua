@@ -60,6 +60,19 @@ Os seguintes assets foram criados especificamente para os sistemas do Desafio 02
 | `sounds/storage_chest_open.wav` | Servo e trava do bau interno |
 | `sounds/inventory_move.wav` | Retorno curto ao mover uma pilha entre slots |
 | `sounds/enemy_alert.wav` | Alerta de proximidade de ameaca hostil |
+| `textures/titan_surface.png` | Terreno exclusivo de Tita com gelo organico e mares de metano |
+| `textures/enemy_titan_stalker.png` | Predador de Metano, inimigo pesado exclusivo de Tita |
+| `textures/npc_ares_officer.png` | Oficial Vega para o dialogo de autorizacao na Base Ares |
+| `textures/portal_titan.png` | Portal Saturnino usado na rota Marte–Tita |
+| `textures/methane_sample.png` | Amostra alternativa que valida o acesso a Tita |
+| `sounds/ambient_titan.wav` | Atmosfera grave, vento e ressonancia gelada de Tita |
+| `textures/enemy_titan_minion.png` | Cacador pequeno que protege o Predador de Metano |
+| `textures/titan_oxygen_base.png` | Refugio pressurizado que recupera oxigenio e energia em Tita |
+| `textures/boss_methane_orb.png` | Orbe de metano disparado pelo chefe de Tita |
+| `textures/boss_ice_shard.png` | Rajada tripla de cristal criogenico do chefe |
+| `textures/boss_shockwave.png` | Onda radial usada nas fases avancadas do chefe |
+| `textures/titan_power_core.png` | Artefato especial derrubado pelo Predador de Metano |
+| `textures/mars_core_reactor.png` | Reator Ares onde o nucleo e instalado para concluir a missao |
 
 Os sprites usam fundo transparente. Cada item importante possui silhueta,
 material e leitura visual proprios, sem depender de simples trocas de cor.

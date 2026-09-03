@@ -20,6 +20,7 @@ import com.badlogic.gdx.utils.viewport.Viewport;
 import com.orion.echoes.lua.LunarEchoesGame;
 import com.orion.echoes.lua.audio.AudioManager;
 import com.orion.echoes.lua.effects.ParticleManager;
+import com.orion.echoes.lua.effects.EnemyDeathAnimation;
 import com.orion.echoes.lua.entities.CollectibleItem;
 import com.orion.echoes.lua.entities.LunarBase;
 import com.orion.echoes.lua.entities.LootChest;
@@ -79,6 +80,7 @@ public class LunarScreen extends ScreenAdapter {
     private SurvivalSystem survivalSystem;
 
     private ParticleManager particleManager;
+    private EnemyDeathAnimation deathAnimations;
 
     private ObstacleSystem obstacleSystem;
 
@@ -516,6 +518,7 @@ public class LunarScreen extends ScreenAdapter {
 
         particleManager =
             new ParticleManager();
+        deathAnimations = new EnemyDeathAnimation();
 
         obstacleSystem =
             new ObstacleSystem();
@@ -770,6 +773,10 @@ public class LunarScreen extends ScreenAdapter {
             aimWorld.y,
             firing
         );
+        for (Enemy enemy : enemies) {
+            if (enemy.consumeDeathAnimation()) deathAnimations.emit(enemy);
+        }
+        deathAnimations.update(delta);
 
         if (playerDamaged) {
             damageFlashTimer = 0.46f;
@@ -1340,6 +1347,7 @@ public class LunarScreen extends ScreenAdapter {
         }
 
         combatSystem.render(batch);
+        deathAnimations.render(batch);
 
         for (
             CollectibleItem item : items

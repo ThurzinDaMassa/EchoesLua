@@ -17,6 +17,7 @@ public final class LootChest {
 
     private final int index;
     private final boolean mars;
+    private final boolean titan;
     private final Rectangle bounds;
     private final Sprite closedSprite;
     private final Sprite openSprite;
@@ -25,8 +26,14 @@ public final class LootChest {
     private float animationTime;
 
     public LootChest(int index, float x, float y, boolean mars, GameAssets assets, boolean opened) {
+        this(index, x, y, mars, false, assets, opened);
+    }
+
+    public LootChest(int index, float x, float y, boolean mars, boolean titan,
+                     GameAssets assets, boolean opened) {
         this.index = index;
         this.mars = mars;
+        this.titan = titan;
         this.opened = opened;
         bounds = new Rectangle(x, y, WIDTH, HEIGHT);
         closedSprite = create(assets.getLootChestClosed(), x, y);
@@ -56,7 +63,8 @@ public final class LootChest {
     public void renderGlow(ShapeRenderer shapes, boolean nearby) {
         if (opened) return;
         float pulse = 1f + MathUtils.sin(animationTime * 3f) * 0.08f;
-        Color accent = mars ? new Color(1f, 0.43f, 0.14f, 1f) : new Color(0.12f, 0.88f, 1f, 1f);
+        Color accent = titan ? new Color(1f, 0.65f, 0.12f, 1f)
+            : mars ? new Color(1f, 0.43f, 0.14f, 1f) : new Color(0.12f, 0.88f, 1f, 1f);
         shapes.setColor(accent.r, accent.g, accent.b, nearby ? 0.25f : 0.12f);
         shapes.circle(getCenterX(), getCenterY(), 76f * pulse, 32);
         shapes.setColor(accent.r, accent.g, accent.b, nearby ? 0.76f : 0.42f);
@@ -86,8 +94,14 @@ public final class LootChest {
             {ItemType.QUANTUM_CORE, ItemType.QUANTUM_CORE, ItemType.ALLOY_PLATE},
             {ItemType.FIBER_MESH, ItemType.ALLOY_PLATE, ItemType.ALLOY_PLATE, ItemType.QUANTUM_CORE}
         };
-        ItemType[] loot = (mars ? marsLoot : lunarLoot)[MathUtils.clamp(index, 0,
-            (mars ? marsLoot : lunarLoot).length - 1)];
+        ItemType[][] titanLoot = {
+            {ItemType.MEDKIT, ItemType.AMMO_CELL, ItemType.OXYGEN, ItemType.ALLOY_PLATE},
+            {ItemType.AMMO_CELL, ItemType.AMMO_CELL, ItemType.MEDKIT, ItemType.FIBER_MESH},
+            {ItemType.OXYGEN, ItemType.QUANTUM_CORE, ItemType.MEDKIT},
+            {ItemType.MEDKIT, ItemType.AMMO_CELL, ItemType.OXYGEN, ItemType.QUANTUM_CORE}
+        };
+        ItemType[][] table = titan ? titanLoot : mars ? marsLoot : lunarLoot;
+        ItemType[] loot = table[MathUtils.clamp(index, 0, table.length - 1)];
         float[][] offsets = {{-76f, -18f}, {122f, -12f}, {-46f, 86f}, {108f, 82f}};
         for (int i = 0; i < loot.length; i++) {
             items.add(new CollectibleItem(loot[i], bounds.x + offsets[i][0], bounds.y + offsets[i][1], assets, mars));

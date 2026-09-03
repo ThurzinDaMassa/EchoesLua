@@ -21,7 +21,9 @@ public enum ItemType {
     REPAIR_TOOL,
     ARMOR_HELMET,
     ARMOR_CHEST,
-    ARMOR_BOOTS;
+    ARMOR_BOOTS,
+    METHANE_SAMPLE,
+    TITAN_CORE;
 
     public boolean isArmor() {
         return this == ARMOR_HELMET || this == ARMOR_CHEST || this == ARMOR_BOOTS;

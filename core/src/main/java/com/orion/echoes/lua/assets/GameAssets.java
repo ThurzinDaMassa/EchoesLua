@@ -60,6 +60,18 @@ public class GameAssets {
         loadTexture(
             AssetPaths.MARS_SURFACE
         );
+        loadTexture(AssetPaths.TITAN_SURFACE);
+        loadTexture(AssetPaths.ENEMY_TITAN_STALKER);
+        loadTexture(AssetPaths.ENEMY_TITAN_MINION);
+        loadTexture(AssetPaths.TITAN_OXYGEN_BASE);
+        loadTexture(AssetPaths.BOSS_METHANE_ORB);
+        loadTexture(AssetPaths.BOSS_ICE_SHARD);
+        loadTexture(AssetPaths.BOSS_SHOCKWAVE);
+        loadTexture(AssetPaths.TITAN_POWER_CORE);
+        loadTexture(AssetPaths.MARS_CORE_REACTOR);
+        loadTexture(AssetPaths.NPC_ARES_OFFICER);
+        loadTexture(AssetPaths.PORTAL_TITAN);
+        loadTexture(AssetPaths.METHANE_SAMPLE);
         loadTexture(AssetPaths.MARS_ROCK_SEDIMENTARY);
         loadTexture(AssetPaths.MARS_ROCK_BASALT);
         loadTexture(AssetPaths.MARS_ROCK_IRONSTONE);
@@ -163,6 +175,18 @@ public class GameAssets {
         setLinear(
             AssetPaths.MARS_SURFACE
         );
+        setLinear(AssetPaths.TITAN_SURFACE);
+        setLinear(AssetPaths.ENEMY_TITAN_STALKER);
+        setLinear(AssetPaths.ENEMY_TITAN_MINION);
+        setLinear(AssetPaths.TITAN_OXYGEN_BASE);
+        setLinear(AssetPaths.BOSS_METHANE_ORB);
+        setLinear(AssetPaths.BOSS_ICE_SHARD);
+        setLinear(AssetPaths.BOSS_SHOCKWAVE);
+        setLinear(AssetPaths.TITAN_POWER_CORE);
+        setLinear(AssetPaths.MARS_CORE_REACTOR);
+        setLinear(AssetPaths.NPC_ARES_OFFICER);
+        setLinear(AssetPaths.PORTAL_TITAN);
+        setLinear(AssetPaths.METHANE_SAMPLE);
         setLinear(AssetPaths.MARS_ROCK_SEDIMENTARY);
         setLinear(AssetPaths.MARS_ROCK_BASALT);
         setLinear(AssetPaths.MARS_ROCK_IRONSTONE);
@@ -293,6 +317,18 @@ public class GameAssets {
     public Texture getMarsSurface() {
         return getTexture(AssetPaths.MARS_SURFACE);
     }
+    public Texture getTitanSurface() { return getTexture(AssetPaths.TITAN_SURFACE); }
+    public Texture getEnemyTitanStalker() { return getTexture(AssetPaths.ENEMY_TITAN_STALKER); }
+    public Texture getEnemyTitanMinion() { return getTexture(AssetPaths.ENEMY_TITAN_MINION); }
+    public Texture getTitanOxygenBase() { return getTexture(AssetPaths.TITAN_OXYGEN_BASE); }
+    public Texture getBossMethaneOrb() { return getTexture(AssetPaths.BOSS_METHANE_ORB); }
+    public Texture getBossIceShard() { return getTexture(AssetPaths.BOSS_ICE_SHARD); }
+    public Texture getBossShockwave() { return getTexture(AssetPaths.BOSS_SHOCKWAVE); }
+    public Texture getTitanPowerCore() { return getTexture(AssetPaths.TITAN_POWER_CORE); }
+    public Texture getMarsCoreReactor() { return getTexture(AssetPaths.MARS_CORE_REACTOR); }
+    public Texture getNpcAresOfficer() { return getTexture(AssetPaths.NPC_ARES_OFFICER); }
+    public Texture getTitanPortal() { return getTexture(AssetPaths.PORTAL_TITAN); }
+    public Texture getMethaneSample() { return getTexture(AssetPaths.METHANE_SAMPLE); }
 
     public Texture getMarsRockSedimentary() { return getTexture(AssetPaths.MARS_ROCK_SEDIMENTARY); }
     public Texture getMarsRockBasalt() { return getTexture(AssetPaths.MARS_ROCK_BASALT); }

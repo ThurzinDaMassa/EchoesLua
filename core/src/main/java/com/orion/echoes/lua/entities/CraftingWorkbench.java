@@ -72,6 +72,7 @@ public final class CraftingWorkbench {
         status.addWater(GameConstants.WATER_PER_ICE);
         status.addFuel(GameConstants.FUEL_PER_ICE);
         status.addOxygen(GameConstants.OXYGEN_PER_ICE);
+        mission.markIceProcessed();
         mission.notifyAction("Gelo processado // +agua, +combustivel e +O2");
         finishCraft(player, particles, audio, false);
         return true;

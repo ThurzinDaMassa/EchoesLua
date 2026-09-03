@@ -17,6 +17,7 @@ public class MissionState {
     public static final int MARS_STORAGE_SIZE = 18;
     public static final int LUNAR_CHEST_COUNT = 4;
     public static final int MARS_CHEST_COUNT = 5;
+    public static final int TITAN_CHEST_COUNT = 4;
 
     private final Map<ItemType, Integer> inventory = new EnumMap<>(ItemType.class);
     private final Map<ItemType, Integer> marsStorage = new EnumMap<>(ItemType.class);
@@ -25,6 +26,7 @@ public class MissionState {
     private final ItemType[] marsStorageLayout = new ItemType[MARS_STORAGE_SIZE];
     private final boolean[] lunarChests = new boolean[LUNAR_CHEST_COUNT];
     private final boolean[] marsChests = new boolean[MARS_CHEST_COUNT];
+    private final boolean[] titanChests = new boolean[TITAN_CHEST_COUNT];
     private ItemType equippedHelmet;
     private ItemType equippedChest;
     private ItemType equippedBoots;
@@ -34,6 +36,13 @@ public class MissionState {
     private boolean weaponCrafted;
     private int magazineAmmo;
     private boolean marsStorageCrafted;
+    private boolean titanDialogueComplete;
+    private boolean titanCombatProof;
+    private boolean methaneSampleDelivered;
+    private boolean enteredTitan;
+    private boolean titanEnemyDefeated;
+    private boolean titanCoreInstalled;
+    private boolean iceProcessed;
     private int enemiesDefeated;
     private long worldSeed;
     private final boolean[] marsSites = new boolean[MARS_SATELLITE_TARGET];
@@ -256,6 +265,21 @@ public class MissionState {
         if (index >= 0 && index < chests.length) chests[index] = opened;
     }
 
+    public boolean openTitanChest(int index) {
+        if (index < 0 || index >= titanChests.length || titanChests[index]) return false;
+        titanChests[index] = true;
+        lastMessage = "Bau criogenico aberto // suprimentos liberados";
+        return true;
+    }
+
+    public boolean isTitanChestOpened(int index) {
+        return index >= 0 && index < titanChests.length && titanChests[index];
+    }
+
+    void restoreTitanChest(int index, boolean opened) {
+        if (index >= 0 && index < titanChests.length) titanChests[index] = opened;
+    }
+
     public boolean repair(RepairType type) {
         if (isRepaired(type)) {
             lastMessage = type.getLabel() + " ja esta operacional";
@@ -363,6 +387,91 @@ public class MissionState {
         return loaded;
     }
 
+    public void completeTitanDialogue() {
+        titanDialogueComplete = true;
+        if (enemiesDefeated > 0) titanCombatProof = true;
+        lastMessage = "AUTORIZACAO REGISTRADA // apresente uma prova";
+    }
+
+    public void registerTitanCombatProof() {
+        if (!titanDialogueComplete) return;
+        titanCombatProof = true;
+        lastMessage = "PROVA DE COMBATE VALIDADA // portal de Tita liberado";
+    }
+
+    public boolean deliverMethaneSample() {
+        if (!titanDialogueComplete || methaneSampleDelivered) return false;
+        if (!consume(ItemType.METHANE_SAMPLE, 1)) {
+            lastMessage = "Amostra de metano ausente // procure o recipiente marcado";
+            return false;
+        }
+        methaneSampleDelivered = true;
+        lastMessage = "AMOSTRA VALIDADA // portal de Tita liberado";
+        return true;
+    }
+
+    public boolean isTitanDialogueComplete() { return titanDialogueComplete; }
+    public boolean hasTitanCombatProof() { return titanCombatProof; }
+    public boolean isMethaneSampleDelivered() { return methaneSampleDelivered; }
+    public boolean hasEnteredTitan() { return enteredTitan; }
+    public boolean isTitanEnemyDefeated() { return titanEnemyDefeated; }
+
+    public boolean isTitanPortalUnlocked() {
+        return titanDialogueComplete && (titanCombatProof || methaneSampleDelivered);
+    }
+
+    public void markEnteredTitan() {
+        enteredTitan = true;
+        lastMessage = "EXPEDICAO TITA INICIADA";
+    }
+
+    public void recordTitanEnemyDefeated() {
+        titanEnemyDefeated = true;
+        lastMessage = "CHEFE NEUTRALIZADO // colete o Nucleo de Tita";
+    }
+
+    public void markIceProcessed() {
+        iceProcessed = true;
+        lastMessage = "SUPORTE DE VIDA ESTABILIZADO // gelo convertido";
+    }
+
+    public boolean isIceProcessed() { return iceProcessed; }
+
+    public boolean installTitanCore() {
+        if (titanCoreInstalled) return false;
+        if (!consume(ItemType.TITAN_CORE, 1)) {
+            lastMessage = "REATOR AGUARDANDO // Nucleo de Tita ausente";
+            return false;
+        }
+        titanCoreInstalled = true;
+        lastMessage = "REATOR ARES ONLINE // energia restaurada";
+        return true;
+    }
+
+    public boolean isTitanCoreInstalled() { return titanCoreInstalled; }
+
+    public String getTitanObjective() {
+        if (getMarsSatellitesRepaired() < MARS_SATELLITE_TARGET)
+            return "Repare os satelites de Marte (" + getMarsSatellitesRepaired() + "/"
+                + MARS_SATELLITE_TARGET + ")";
+        if (!titanDialogueComplete) return "Entre na Base Ares e fale com a Oficial Vega";
+        if (!isTitanPortalUnlocked())
+            return "Obtenha prova de combate ou entregue a amostra de metano";
+        if (!enteredTitan) return "Ative o portal e viaje para Tita";
+        if (!titanEnemyDefeated) return "Explore Tita e neutralize o Predador de Metano";
+        if (getCount(ItemType.TITAN_CORE) == 0 && !titanCoreInstalled)
+            return "Colete o Nucleo de Tita deixado pelo chefe";
+        if (!titanCoreInstalled) return "Retorne a Marte e instale o nucleo no Reator Ares";
+        return "PROTOCOLO CONCLUIDO // energia de Marte restaurada";
+    }
+
+    public String getTitanPortalStatus() {
+        if (!titanDialogueComplete) return "TITA BLOQUEADO // FALE COM VEGA";
+        if (!titanCombatProof && !methaneSampleDelivered)
+            return "TITA BLOQUEADO // PROVA PENDENTE";
+        return "PORTAL TITA ONLINE";
+    }
+
     public void recordEnemyDefeated() {
         enemiesDefeated++;
         lastMessage = "Ameaca neutralizada";
@@ -413,6 +522,7 @@ public class MissionState {
 
     public boolean isPortalReady(float oxygen) {
         return getRepairCount() >= 4
+            && iceProcessed
             && weaponCrafted
             && enemiesDefeated >= LUNAR_ENEMY_TARGET
             && oxygen > GameConstants.CRITICAL_OXYGEN_THRESHOLD;
@@ -424,16 +534,18 @@ public class MissionState {
 
     public int getLunarStage() {
         if (getRepairCount() < 4) return 1;
-        if (!weaponCrafted) return 2;
-        if (enemiesDefeated < LUNAR_ENEMY_TARGET) return 3;
-        return 4;
+        if (!iceProcessed) return 2;
+        if (!weaponCrafted) return 3;
+        if (enemiesDefeated < LUNAR_ENEMY_TARGET) return 4;
+        return 5;
     }
 
     public String getStageTitle() {
         return switch (getLunarStage()) {
             case 1 -> "RECUPERAR A COLONIA";
-            case 2 -> "MONTAR A ARMA EVA";
-            case 3 -> "NEUTRALIZAR A AMEACA";
+            case 2 -> "ESTABILIZAR SUPORTE DE VIDA";
+            case 3 -> "MONTAR A ARMA EVA";
+            case 4 -> "NEUTRALIZAR A AMEACA";
             default -> "ATIVAR O PORTAL";
         };
     }
@@ -441,6 +553,11 @@ public class MissionState {
     public String getStageInstruction(float oxygen) {
         if (getRepairCount() < 4) {
             return "Ache cada peca e pressione E nas 4 estacoes (" + getRepairCount() + "/4)";
+        }
+        if (!iceProcessed) {
+            return getCount(ItemType.ICE_ROCK) > 0
+                ? "Leve o gelo para a bancada e processe o suporte de vida"
+                : "Colete uma amostra de gelo lunar (0/1)";
         }
         if (!weaponCrafted) {
             return canCraftWeapon()
@@ -463,6 +580,7 @@ public class MissionState {
                 if (!isRepaired(type)) return type.getRequiredPart();
             }
         }
+        if (!iceProcessed) return ItemType.ICE_ROCK;
         if (!weaponCrafted) {
             if (getCount(ItemType.WEAPON_PART_A) == 0) return ItemType.WEAPON_PART_A;
             if (getCount(ItemType.WEAPON_PART_B) == 0) return ItemType.WEAPON_PART_B;
@@ -496,6 +614,19 @@ public class MissionState {
     }
 
     void restoreMarsStorage(boolean crafted) { marsStorageCrafted = crafted; }
+    void restoreTitanProgress(boolean dialogue, boolean combatProof,
+                              boolean sampleDelivered, boolean entered,
+                              boolean enemyDefeated) {
+        titanDialogueComplete = dialogue;
+        titanCombatProof = combatProof;
+        methaneSampleDelivered = sampleDelivered;
+        enteredTitan = entered;
+        titanEnemyDefeated = enemyDefeated;
+    }
+    void restoreExtendedProgress(boolean processedIce, boolean coreInstalled) {
+        iceProcessed = processedIce;
+        titanCoreInstalled = coreInstalled;
+    }
     void restoreStoredCount(ItemType type, int count) {
         marsStorage.put(type, Math.max(0, count));
         if (count > 0) ensureStorageSlot(type);
@@ -591,6 +722,8 @@ public class MissionState {
             case ARMOR_HELMET -> "capacete blindado";
             case ARMOR_CHEST -> "peitoral blindado";
             case ARMOR_BOOTS -> "botas blindadas";
+            case METHANE_SAMPLE -> "amostra de metano";
+            case TITAN_CORE -> "Nucleo de Tita";
         };
     }
 }

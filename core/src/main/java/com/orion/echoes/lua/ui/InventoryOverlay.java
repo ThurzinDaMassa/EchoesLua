@@ -398,6 +398,8 @@ public final class InventoryOverlay {
             case ARMOR_HELMET -> assets.getArmorHelmet();
             case ARMOR_CHEST -> assets.getArmorChest();
             case ARMOR_BOOTS -> assets.getArmorBoots();
+            case METHANE_SAMPLE -> assets.getMethaneSample();
+            case TITAN_CORE -> assets.getTitanPowerCore();
         };
     }
 

@@ -24,6 +24,7 @@ class MissionStateTest {
         state.collect(ItemType.WEAPON_PART_B);
         state.collect(ItemType.WEAPON_PART_C);
         assertTrue(state.craftWeapon());
+        state.markIceProcessed();
         for (int i = 0; i < MissionState.LUNAR_ENEMY_TARGET - 1; i++) {
             state.recordEnemyDefeated();
         }
@@ -101,5 +102,57 @@ class MissionStateTest {
         assertEquals(1, state.getCount(ItemType.ICE_ROCK));
         assertTrue(state.consumeItem(ItemType.ICE_ROCK, 1));
         assertEquals(0, state.getCount(ItemType.ICE_ROCK));
+    }
+
+    @Test
+    void titanPortalRequiresDialogueAndExactlyOneProofPath() {
+        MissionState state = new MissionState();
+        assertFalse(state.isTitanPortalUnlocked());
+        state.completeTitanDialogue();
+        assertFalse(state.isTitanPortalUnlocked());
+        state.registerTitanCombatProof();
+        assertTrue(state.isTitanPortalUnlocked());
+    }
+
+    @Test
+    void methaneSampleIsConsumedWhenItUnlocksTitan() {
+        MissionState state = new MissionState();
+        state.collect(ItemType.METHANE_SAMPLE);
+        assertFalse(state.deliverMethaneSample());
+        state.completeTitanDialogue();
+        assertTrue(state.deliverMethaneSample());
+        assertEquals(0, state.getCount(ItemType.METHANE_SAMPLE));
+        assertTrue(state.isTitanPortalUnlocked());
+    }
+
+    @Test
+    void lunarIceProcessingIsARequiredMissionStage() {
+        MissionState state = new MissionState();
+        for (RepairType type : RepairType.values()) {
+            state.collect(type.getRequiredPart());
+            assertTrue(state.repair(type));
+        }
+        state.collect(ItemType.WEAPON_PART_A);
+        state.collect(ItemType.WEAPON_PART_B);
+        state.collect(ItemType.WEAPON_PART_C);
+        assertTrue(state.craftWeapon());
+        for (int i = 0; i < MissionState.LUNAR_ENEMY_TARGET; i++) state.recordEnemyDefeated();
+        assertEquals(2, state.getLunarStage());
+        assertEquals(ItemType.ICE_ROCK, state.getRequestedItem());
+        assertFalse(state.isPortalReady(80f));
+        state.markIceProcessed();
+        assertTrue(state.isPortalReady(80f));
+    }
+
+    @Test
+    void titanCoreMustBeCarriedBackAndInstalled() {
+        MissionState state = new MissionState();
+        state.recordTitanEnemyDefeated();
+        assertFalse(state.isTitanCoreInstalled());
+        assertFalse(state.installTitanCore());
+        state.collect(ItemType.TITAN_CORE);
+        assertTrue(state.installTitanCore());
+        assertTrue(state.isTitanCoreInstalled());
+        assertEquals(0, state.getCount(ItemType.TITAN_CORE));
     }
 }

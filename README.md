@@ -1,8 +1,8 @@
 # Echoes — Integracao Lua → Marte
 
-Jogo 2D de sobrevivencia e exploracao lunar desenvolvido em Java 17 com
+Jogo 2D de sobrevivencia e exploracao espacial desenvolvido em Java 17 com
 [libGDX](https://libgdx.com/). Explore a superficie, administre oxigenio e
-energia, recupere a colonia e atravesse o portal para a Base de Marte.
+energia, recupere a colonia e avance pela Lua, Marte e Tita.
 
 ## Gameplay
 
@@ -19,6 +19,10 @@ energia, recupere a colonia e atravesse o portal para a Base de Marte.
 - Colete tres componentes, fabrique a arma EVA, mire livremente com o mouse e
   dispare projeteis de energia contra as ameacas hostis.
 - Cumpra o protocolo lunar para liberar o portal e seguir para Marte sem perder progresso.
+- Restaure os quatro satelites de Marte, converse com a Oficial Vega e libere a expedicao de Tita.
+- Explore Tita em um mapa proprio, abra os baus criogenicos e enfrente o Predador de Metano.
+- Use o refugio pressurizado de Tita para recuperar oxigenio e energia, e colete suprimentos espalhados.
+- Recupere o Nucleo de Tita, retorne diretamente a Marte e instale-o no Reator Ares para concluir a missao.
 - Escolha diretamente no menu entre Facil, Medio e Dificil. Cada modo altera consumo de
   oxigenio, objetivos e multiplicador de pontos.
 
@@ -40,7 +44,7 @@ arma, inimigos eliminados, itens coletados e a fase atual.
 | `L` | Continuar o ultimo autosave a partir do menu |
 | `Esc` | Pausar ou voltar |
 | `F1` | Ativar/desativar audio durante a missao |
-| `R` | Reiniciar depois de uma falha ou iniciar nova missao |
+| `R` | Recarregar a arma durante a missao |
 | `M` | Voltar ao menu nas telas de pausa/resultado |
 | `1` a `4` no menu | Escolher o astronauta |
 | `Delete` no menu | Apagar o autosave atual |
@@ -51,14 +55,22 @@ cima/baixo para o volume, `M` para mute e `F` para tela cheia.
 
 ## Requisitos do portal
 
-O portal e liberado quando o astronauta conclui os quatro reparos,
-fabrica a arma, elimina as quatro ameacas e mantem o oxigenio acima do nivel critico.
-O HUD organiza o protocolo em quatro etapas numeradas e mostra a acao exata do
-passo atual, junto do resumo de sistemas, arma, hostis e portal.
+O portal e liberado quando o astronauta conclui os quatro reparos, processa uma
+amostra de gelo lunar, fabrica a arma, elimina as quatro ameacas e mantem o
+oxigenio acima do nivel critico. O HUD organiza o protocolo em cinco etapas e
+mostra a acao exata do passo atual, junto do resumo de sistemas, arma, hostis e portal.
 
 Em Marte, a Base Ares recarrega O2 como a base lunar. A fase possui obstaculos,
 recursos, kits medicos, inimigos, arma, projeteis, particulas, som ambiente e
 quatro satelites danificados que levam tres segundos para serem restaurados.
+
+Depois dos quatro satelites, a missao continua: fale com a Oficial Vega dentro
+da Base Ares. O portal de Tita exige o dialogo concluido e uma de duas provas:
+uma eliminacao em combate ou a entrega de uma amostra de metano. Tita possui
+terreno, audio ambiente, baus, minions, chefe com tres ataques e objetivo proprios.
+Depois do combate, o nucleo derrubado deve ser instalado em Marte para abrir a
+tela animada de conclusao. O autosave reconhece
+`LUA`, `BASE`, `MARTE`, `MARS_BASE` e `TITA`.
 
 ## Estrutura
 

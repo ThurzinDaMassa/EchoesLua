@@ -12,6 +12,7 @@ public final class SoundPaths {
     public static final String AMBIENT_LUNAR =
         "sounds/ambient_lunar.wav";
     public static final String AMBIENT_MARS = "sounds/ambient_mars.wav";
+    public static final String AMBIENT_TITAN = "sounds/ambient_titan.wav";
     public static final String WEAPON_FIRE = "sounds/weapon_fire.wav";
     public static final String ENEMY_HIT = "sounds/enemy_hit.wav";
     public static final String MEDKIT_PICKUP = "sounds/medkit_pickup.wav";

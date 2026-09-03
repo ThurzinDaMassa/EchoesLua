@@ -153,10 +153,11 @@ public class ModernHud {
 
         MissionState state = mission.getState();
         float missionProgress = (MathUtils.clamp(state.getRepairCount() / 4f, 0f, 1f)
+            + (state.isIceProcessed() ? 1f : 0f)
             + (state.hasWeapon() ? 1f : 0f)
             + MathUtils.clamp(state.getEnemiesDefeated()
-                / (float) MissionState.LUNAR_ENEMY_TARGET, 0f, 1f)) / 3f;
-        UiTheme.bar(shapes, 1008f, 632f, 226f, 5f, missionProgress,
+                / (float) MissionState.LUNAR_ENEMY_TARGET, 0f, 1f)) / 4f;
+        UiTheme.bar(shapes, 1008f, 627f, 226f, 4f, missionProgress,
             portal.isActive() ? UiTheme.PURPLE : UiTheme.CYAN);
 
         shapes.setColor(0.004f, 0.012f, 0.018f, 0.82f);
@@ -254,7 +255,7 @@ public class ModernHud {
         MissionState state = mission.getState();
 
         label(fonts.label, UiTheme.CYAN_SOFT);
-        fonts.label.draw(batch, "ETAPA " + state.getLunarStage() + "/4 // "
+        fonts.label.draw(batch, "ETAPA " + state.getLunarStage() + "/5 // "
             + state.getStageTitle(), 308f, 678f);
         label(fonts.micro, UiTheme.MUTED);
         fonts.micro.draw(batch, "T+" + formatTime(missionTime), 842f, 678f, 90f, Align.right, false);
@@ -268,10 +269,11 @@ public class ModernHud {
         label(fonts.label, portal.isActive() ? UiTheme.PURPLE : UiTheme.CYAN_SOFT);
         fonts.label.draw(batch, "PROGRESSO LUA", 1008f, 678f);
         label(fonts.micro, UiTheme.TEXT);
-        fonts.micro.draw(batch, "R " + state.getRepairCount() + "/4   ARMA "
-            + (state.hasWeapon() ? "ON" : state.getWeaponPartCount() + "/3")
-            + "   H " + Math.min(state.getEnemiesDefeated(), MissionState.LUNAR_ENEMY_TARGET)
-            + "/" + MissionState.LUNAR_ENEMY_TARGET, 1008f, 651f);
+        fonts.micro.draw(batch, "REPAROS " + state.getRepairCount() + "/4   GELO "
+            + (state.isIceProcessed() ? "OK" : "--"), 1008f, 654f);
+        fonts.micro.draw(batch, "ARMA " + (state.hasWeapon() ? "ON" : state.getWeaponPartCount() + "/3")
+            + "   HOSTIS " + Math.min(state.getEnemiesDefeated(), MissionState.LUNAR_ENEMY_TARGET)
+            + "/" + MissionState.LUNAR_ENEMY_TARGET, 1008f, 638f);
 
         batch.draw(assets.getEvaWeapon(), 1014f, 556f, 68f, 34f);
         label(fonts.micro, weaponReloading ? UiTheme.CYAN : UiTheme.WARNING);
@@ -390,6 +392,8 @@ public class ModernHud {
             case ARMOR_HELMET -> assets.getArmorHelmet();
             case ARMOR_CHEST -> assets.getArmorChest();
             case ARMOR_BOOTS -> assets.getArmorBoots();
+            case METHANE_SAMPLE -> assets.getMethaneSample();
+            case TITAN_CORE -> assets.getTitanPowerCore();
         };
     }
 
@@ -461,6 +465,8 @@ public class ModernHud {
             case ARMOR_HELMET -> "CAP";
             case ARMOR_CHEST -> "PEIT";
             case ARMOR_BOOTS -> "BOTAS";
+            case METHANE_SAMPLE -> "CH4";
+            case TITAN_CORE -> "NUCLEO";
         };
     }
 
@@ -486,6 +492,8 @@ public class ModernHud {
             case ARMOR_HELMET -> assets.getArmorHelmet();
             case ARMOR_CHEST -> assets.getArmorChest();
             case ARMOR_BOOTS -> assets.getArmorBoots();
+            case METHANE_SAMPLE -> assets.getMethaneSample();
+            case TITAN_CORE -> assets.getTitanPowerCore();
         };
     }
 

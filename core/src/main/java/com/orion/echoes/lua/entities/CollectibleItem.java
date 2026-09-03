@@ -146,6 +146,10 @@ public class CollectibleItem {
                 return assets.getArmorChest();
             case ARMOR_BOOTS:
                 return assets.getArmorBoots();
+            case METHANE_SAMPLE:
+                return assets.getMethaneSample();
+            case TITAN_CORE:
+                return assets.getTitanPowerCore();
 
             default:
                 throw new IllegalArgumentException(
@@ -179,6 +183,10 @@ public class CollectibleItem {
                 return 64f;
             case ARMOR_HELMET, ARMOR_CHEST, ARMOR_BOOTS:
                 return 62f;
+            case METHANE_SAMPLE:
+                return 60f;
+            case TITAN_CORE:
+                return 88f;
 
             default:
                 return 48f;
@@ -272,6 +280,8 @@ public class CollectibleItem {
             case FIBER_MESH -> new Color(1f, 0.64f, 0.22f, 1f);
             case ARMOR_HELMET, ARMOR_CHEST, ARMOR_BOOTS -> new Color(0.24f, 0.92f, 1f, 1f);
             case MINING_TOOL, REPAIR_TOOL -> new Color(1f, 0.76f, 0.25f, 1f);
+            case METHANE_SAMPLE -> new Color(1f, 0.62f, 0.18f, 1f);
+            case TITAN_CORE -> new Color(1f, 0.72f, 0.16f, 1f);
             default -> new Color(0.22f, 0.96f, 1f, 1f);
         };
     }

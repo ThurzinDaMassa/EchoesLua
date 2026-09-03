@@ -1,6 +1,7 @@
 package com.orion.echoes.lua.entities;
 
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.MathUtils;
@@ -34,16 +35,17 @@ public class Portal {
         GameAssets assets
     ) {
 
+        this(x, y, width, height, assets.getPortal());
+    }
+
+    public Portal(float x, float y, float width, float height, Texture texture) {
         this.x = x;
         this.y = y;
 
         this.width = width;
         this.height = height;
 
-        sprite =
-            new Sprite(
-                assets.getPortal()
-            );
+        sprite = new Sprite(texture);
 
         sprite.setSize(
             width,

@@ -291,7 +291,13 @@ public class MenuScreen extends ScreenAdapter {
         game.getAudio().playMenuClick();
         MissionState mission = game.getProgress().loadMissionState();
         PlayerStatus status = game.getProgress().loadPlayerStatus();
-        if ("MARS_BASE".equals(game.getProgress().getSavedScene())) {
+        if ("TITA".equals(game.getProgress().getSavedScene())) {
+            game.changeScreen(new TitanScreen(game, mission, status,
+                game.getProgress().getSavedMissionTime(),
+                game.getProgress().getSavedCollectedItems(),
+                game.getProgress().getSavedPlayerX(520f),
+                game.getProgress().getSavedPlayerY(660f)));
+        } else if ("MARS_BASE".equals(game.getProgress().getSavedScene())) {
             game.changeScreen(new MarsBaseInteriorScreen(game, mission, status,
                 game.getProgress().getSavedMissionTime(),
                 game.getProgress().getSavedCollectedItems()));

@@ -17,6 +17,7 @@ public class AudioManager {
 
     private Music portalLoopMusic;
     private Music marsAmbientMusic;
+    private Music titanAmbientMusic;
 
     // =========================================================
     // SOUNDS
@@ -144,6 +145,7 @@ public class AudioManager {
                 )
             );
         marsAmbientMusic = Gdx.audio.newMusic(Gdx.files.internal(SoundPaths.AMBIENT_MARS));
+        titanAmbientMusic = Gdx.audio.newMusic(Gdx.files.internal(SoundPaths.AMBIENT_TITAN));
 
         pickupOxygenSound =
             loadSound(
@@ -252,6 +254,8 @@ public class AudioManager {
         );
         marsAmbientMusic.setLooping(true);
         marsAmbientMusic.setVolume(getMusicVolume() * 0.72f);
+        titanAmbientMusic.setLooping(true);
+        titanAmbientMusic.setVolume(getMusicVolume() * 0.70f);
     }
 
     // =========================================================
@@ -593,7 +597,14 @@ public class AudioManager {
 
     public void playMarsAmbient() {
         stopAmbientMusic();
+        if (titanAmbientMusic != null) titanAmbientMusic.stop();
         if (!marsAmbientMusic.isPlaying()) marsAmbientMusic.play();
+    }
+
+    public void playTitanAmbient() {
+        stopAmbientMusic();
+        if (marsAmbientMusic != null) marsAmbientMusic.stop();
+        if (!titanAmbientMusic.isPlaying()) titanAmbientMusic.play();
     }
 
     // =========================================================
@@ -787,6 +798,7 @@ public class AudioManager {
             portalLoopMusic.setPan(portalPan, getPortalVolume() * portalMix);
         }
         if (marsAmbientMusic != null) marsAmbientMusic.setVolume(getMusicVolume() * 0.72f);
+        if (titanAmbientMusic != null) titanAmbientMusic.setVolume(getMusicVolume() * 0.70f);
     }
 
     private float clamp01(
@@ -831,6 +843,7 @@ public class AudioManager {
 
         stopPortalLoop();
         if (marsAmbientMusic != null) marsAmbientMusic.stop();
+        if (titanAmbientMusic != null) titanAmbientMusic.stop();
     }
 
     // =========================================================
@@ -847,6 +860,7 @@ public class AudioManager {
             portalLoopMusic.dispose();
         }
         if (marsAmbientMusic != null) marsAmbientMusic.dispose();
+        if (titanAmbientMusic != null) titanAmbientMusic.dispose();
 
         disposeSound(
             pickupOxygenSound

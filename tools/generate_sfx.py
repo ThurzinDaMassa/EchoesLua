@@ -104,6 +104,16 @@ def enemy_alert(t: float, _i: int, _n: int) -> float:
     return (0.24 * sweep * pulse + 0.11 * low) * math.exp(-1.5 * t)
 
 
+def titan(t: float, _i: int, total: int) -> float:
+    length = total / RATE
+    fade = min(1, t * 1.2, (length - t) * 1.2)
+    methane_wind = noise() * 0.055
+    deep_atmosphere = math.sin(2 * math.pi * 34 * t) * 0.10
+    ice_resonance = math.sin(2 * math.pi * 91 * t + math.sin(t * 0.7) * 2.4) * 0.035
+    distant_pulse = math.sin(2 * math.pi * 0.13 * t) * 0.025
+    return (methane_wind + deep_atmosphere + ice_resonance + distant_pulse) * fade
+
+
 OUT.mkdir(parents=True, exist_ok=True)
 save("weapon_fire.wav", 0.34, fire)
 save("enemy_hit.wav", 0.30, hit)
@@ -115,3 +125,4 @@ save("weapon_reload_complete.wav", 0.28, reload_complete)
 save("storage_chest_open.wav", 0.65, chest_open)
 save("inventory_move.wav", 0.16, item_move)
 save("enemy_alert.wav", 0.72, enemy_alert)
+save("ambient_titan.wav", 10.0, titan)
